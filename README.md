@@ -44,8 +44,14 @@ Edit `.env` to point `DB_PATH` to your USB SSD mount point (e.g., `/mnt/usb_ssd/
 
 ### 3. Running the Server
 
+**For Development:**
 ```bash
 python app.py
+```
+
+**For Production (Recommended):**
+```bash
+python run_prod.py
 ```
 Access the application at `http://localhost:5000`.
 
@@ -67,7 +73,7 @@ To run as a service on boot:
    [Service]
    User=pi
    WorkingDirectory=/home/pi/devalaya-pro
-   ExecStart=/usr/bin/python3 app.py
+   ExecStart=/usr/bin/python3 run_prod.py
    Restart=always
 
    [Install]
