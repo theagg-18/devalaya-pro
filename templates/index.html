@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center" style="padding: 4rem 0;">
+    <h1 style="font-size: 3rem; margin-bottom: 1rem;">Devalaya Pro</h1>
+    <p style="font-size: 1.25rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 2rem;">
+        Fast, offline-first billing system designed for Raspberry Pi.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="/login" class="btn btn-primary" style="padding: 12px 32px; font-size: 1.1rem;">Cashier Login</a>
+        <a href="/admin" class="btn btn-secondary" style="padding: 12px 32px; font-size: 1.1rem;">Admin Portal</a>
+    </div>
+</div>
+
+<div class="flex-grid mt-4">
+    <div class="card">
+        <h3>⚡ Fast Billing</h3>
+        <p>Optimized for touch screens and thermal printers. Vazhipadu and Donations modes included.</p>
+    </div>
+    <div class="card">
+        <h3>🔒 Offline First</h3>
+        <p>Works without internet. Data is stored locally on USB SSD for reliability.</p>
+    </div>
+    <div class="card">
+        <h3>🖨️ Multi-Printer support</h3>
+        <p>Intelligent printer routing via CUPS. Detects and assigns printers dynamically.</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="card">
+    <h2>Temple Settings</h2>
+    <form method="post">
+        <div class="form-group">
+            <label for="name_mal">Temple Name (Malayalam) *</label>
+            <input type="text" id="name_mal" name="name_mal" value="{{ settings.name_mal }}" required
+                placeholder="ക്ഷേത്ര നാമം">
+        </div>
+
+        <div class="form-group">
+            <label for="name_eng">Temple Name (English)</label>
+            <input type="text" id="name_eng" name="name_eng" value="{{ settings.name_eng }}" placeholder="Temple Name">
+        </div>
+
+        <div class="form-group">
+            <label for="place">Place / District</label>
+            <input type="text" id="place" name="place" value="{{ settings.place }}" placeholder="Place">
+        </div>
+
+        <div class="form-group">
+            <label for="receipt_footer">Receipt Footer Message</label>
+            <textarea id="receipt_footer" name="receipt_footer" rows="3"
+                style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px;">{{ settings.receipt_footer }}</textarea>
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="backup_enabled" name="backup_enabled" style="width: auto;" {% if
+                settings.backup_enabled %}checked{% endif %}>
+            <label for="backup_enabled" style="margin: 0;">Enable Cloud Backup (Optional)</label>
+        </div>
+
+        <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+            <button type="submit" formaction="{{ url_for('admin.trigger_backup') }}" class="btn btn-secondary">Backup
+                Now</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
