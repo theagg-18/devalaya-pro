@@ -1,0 +1,60 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="card">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h2>Reports</h2>
+        <form method="get" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <label for="date">Select Date:</label>
+            <input type="date" name="date" value="{{ date_filter }}" onchange="this.form.submit()" style="width: auto;">
+            <a href="{{ url_for('admin.export_reports', date=date_filter) }}" class="btn btn-secondary">Export CSV</a>
+        </form>
+    </div>
+
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <div
+            style="padding: 1rem; background: #e0e7ff; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: #4338ca; margin-bottom: 4px;">Total Revenue</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #3730a3;">₹{{ "%.2f"|format(total_amount) }}</div>
+        </div>
+        <div
+            style="padding: 1rem; background: #dcfce7; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: #15803d; margin-bottom: 4px;">Total Bills</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #14532d;">{{ count }}</div>
+        </div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
+                <th style="padding: 12px;">Bill ID</th>
+                <th style="padding: 12px;">Time</th>
+                <th style="padding: 12px;">Cashier</th>
+                <th style="padding: 12px;">Devotee</th>
+                <th style="padding: 12px; text-align: right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in bills %}
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px;">#{{ bill.id }}</td>
+                <td style="padding: 12px;">{{ bill.created_at.strftime('%H:%M') }}</td>
+                <td style="padding: 12px;">{{ bill.cashier_name }}</td>
+                <td style="padding: 12px;">
+                    {{ bill.devotee_name }}
+                    {% if bill.star %}<span style="font-size: 0.8rem; color: #64748b;">({{ bill.star }})</span>{% endif
+                    %}
+                </td>
+                <td style="padding: 12px; text-align: right; font-weight: 600;">₹{{ "%.2f"|format(bill.total_amount) }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center" style="padding: 2rem;">No transactions found for this date.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

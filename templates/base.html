@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Devalaya Pro{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <header>
+        <a href="/" class="brand">
+            🔱 <span>Devalaya Pro</span>
+        </a>
+        <nav>
+            {% if g.user %}
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Logout ({{ g.user.username }})</a>
+            {% else %}
+            <a href="/login" class="btn btn-primary">Login</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="alerts">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center" style="padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
+        <p>&copy; {{ now_year }} Devalaya Pro. All Rights Reserved.</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+    <script>
+        function confirmAction(event, message) {
+            if (!confirm(message || 'Are you sure?')) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+    </script>
+</body>
+
+</html>
