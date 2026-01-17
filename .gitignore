@@ -109,3 +109,17 @@ dump.rdb
 # Logs
 *.log
 debug_checkout.log
+
+# Temporary and Data-specific scripts
+update_*.py
+migrate_*.py
+fix_*.py
+diagnose_*.py
+temp_*.py
+test_*.py
+
+# Credentials and Local Config
+.env
+.env.local
+.flaskenv
+
