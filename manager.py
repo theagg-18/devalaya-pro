@@ -122,15 +122,26 @@ Categories=Utility;
 
 def run_migrations():
     print("\n[+] Checking for database migrations...")
-    files = [f for f in os.listdir('.') if f.startswith('migrate_') and f.endswith('.py')]
+    migrations_dir = "migrations"
+    
+    if not os.path.exists(migrations_dir):
+        print("Migrations directory not found.")
+        return
+
+    files = [f for f in os.listdir(migrations_dir) if f.startswith('migrate_') and f.endswith('.py')]
     if not files:
         print("No migration scripts found.")
         return
 
+    # Add current directory to PYTHONPATH so scripts can import config/database
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.getcwd()
+
     for f in files:
         print(f"Running {f}...")
         try:
-            subprocess.run([sys.executable, f], check=True)
+            script_path = os.path.join(migrations_dir, f)
+            subprocess.run([sys.executable, script_path], check=True, env=env)
         except subprocess.CalledProcessError as e:
             print(f"[-] Error running {f}: {e}")
 

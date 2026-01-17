@@ -1,103 +1,44 @@
-# Devalaya Pro
+# Devalaya Billing System
 
-A robust, offline-first billing system designed for Raspberry Pi servers in temple counters. Built with Flask, SQLite, and vanilla HTML/CSS.
+A robust, cross-platform billing and temple management system designed for ease of use and reliability.
 
 ## Features
+*   **Point of Sale**: Fast and efficient billing interface for temple services.
+*   **User Management**: Role-based access control (Admin/Cashier).
+*   **Reporting**: Detailed financial reports and dashboards.
+*   **Cross-Platform**: Runs on Windows, Linux, and Raspberry Pi.
+*   **Offline First**: Works without an internet connection (updates via Zip allowed).
 
-- **Offline-First**: Works entirely without internet.
-- **Role-Based Access**: Admin and Cashier roles.
-- **Multi-Mode Billing**:
-  - **Vazhipadu**: Devotee Name, Star, Multiple Vazhipadu.
-  - **Donation**: Quick Item + Amount billing.
-- **Batch Printing**: Group multiple devotees into a single print job.
-- **Printer Management**: Smart CUPS integration with online status checks.
-- **Reports**: Daily revenue and cashier performance.
-- **Backup**: One-click local database backup.
+## Quick Start
 
-## Requirements
+### Windows
+1.  Double-click **`manager.bat`**.
+2.  Choose **Option 1 (Install)** to setup the environment and create Desktop shortcuts.
+3.  Launch the server using the **"Start Devalaya Server"** shortcut.
 
-- Raspberry Pi 4 (Recommended) or any Linux/Windows PC.
-- Python 3.9+
-- Thermal Printer (ESC/POS compatible via USB).
-- USB SSD (Recommended for Database storage on RPi).
+### Linux / Raspberry Pi
+1.  Open a terminal in the project directory.
+2.  Run:
+    ```bash
+    bash manager.sh
+    ```
+3.  Choose **Option 1 (Install)**.
+4.  Launch from your Application Menu or Desktop.
 
-## Setup Guide
+## System Manager
+The included `manager` tool allows you to:
+*   **Install/Reinstall**: Setup dependencies and shortcuts.
+*   **Update**: Pull changes from Git (Online) or install from `update.zip` (Offline).
+*   **Control Server**: Start, Stop, Pause, or Resume the server process.
 
-### 1. Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/devalaya-pro.git
-cd devalaya-pro
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### 2. Configuration
-
-Copy the example environment file:
-```bash
-cp .env.example .env
-```
-Edit `.env` to point `DB_PATH` to your USB SSD mount point (e.g., `/mnt/usb_ssd/temple.db`).
-
-### 3. Running the Server
-
-**For Development:**
-```bash
-python app.py
-```
-
-**For Production (Recommended):**
-```bash
-python run_prod.py
-```
-Access the application at `http://localhost:5000`.
-
-### 4. Initial Login
-
-- **Admin**: `admin` / `1234`
-- **Cashier**: Create a cashier in Admin -> Users first.
-
-## Raspberry Pi Production Setup
-
-To run as a service on boot:
-
-1. Create a systemd service file `/etc/systemd/system/temple.service`:
-   ```ini
-   [Unit]
-   Description=Devalaya Pro Server
-   After=network.target
-
-   [Service]
-   User=pi
-   WorkingDirectory=/home/pi/devalaya-pro
-   ExecStart=/usr/bin/python3 run_prod.py
-   Restart=always
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-2. Enable and start:
-   ```bash
-   sudo systemctl enable temple
-   sudo systemctl start temple
-   ```
-
-## Printer Setup (CUPS)
-
-Ensure CUPS is installed:
-```bash
-sudo apt install cups
-sudo usermod -aG lpadmin pi
-```
-Add printers via `http://localhost:631` or use the Admin -> Printer settings page to discover connected printers (requires `lpstat`).
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## Project Structure
+*   **`app.py`**: Development server entry point.
+*   **`run_prod.py`**: Production server entry point (Waitress/Gunicorn).
+*   **`manager.py`**: System management utility.
+*   **`migrations/`**: Database schema update scripts.
+*   **`maintenance/`**: Diagnostic and fix scripts.
+*   **`routes/`**: Application logic and API endpoints.
+*   **`templates/` & `static/`**: Frontend assets.
 
 ## License
-
-This project is licensed under the [GNU General Public License v3 (GPLv3)](LICENSE).
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
