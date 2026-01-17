@@ -51,15 +51,30 @@
                     </td>
                     <td style="padding: 1rem; color: var(--text-muted);">{{ bill.created_at }}</td>
                     <td style="padding: 1rem;">
-                        <span
-                            style="padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; background: {{ '#e0e7ff' if bill.type == 'vazhipadu' else '#fabe2533' }}">
+                        <span class="tag {{ 'tag-puja' if bill.type == 'vazhipadu' else 'tag-item' }}">
                             {{ bill.type|title }}
                         </span>
                     </td>
                     <td style="padding: 1rem;">
-                        <div>{{ bill.devotee_name or 'N/A' }}</div>
-                        {% if bill.star %}<div style="font-size: 0.8rem; color: var(--text-muted);">{{ bill.star }}
-                        </div>{% endif %}
+                        <div style="font-weight: 600;">{{ bill.devotee_name or 'N/A' }}</div>
+                        {% if bill.star %}
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                            {{ star_map.get(bill.star, bill.star) }} {% if bill.star in star_map %}({{ bill.star }}){%
+                            endif %}
+                        </div>
+                        {% endif %}
+                        {% if bill.scheduled_date %}<div
+                            style="font-size: 0.85rem; color: var(--primary); font-weight: 500;">Vazhipadu: {{
+                            bill.scheduled_date }}</div>{% endif %}
+
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0;">
+                            {% for item in bill.line_items %}
+                            <div style="font-size: 0.85rem; display: flex; justify-content: space-between; gap: 1rem;">
+                                <span>• {{ item.name }} {% if item.count > 1 %}(x{{ item.count }}){% endif %}</span>
+                                <span style="color: #64748b;">₹{{ "%.2f"|format(item.total) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </td>
                     <td style="padding: 1rem; text-align: right; font-weight: 600;">₹{{ "%.2f"|format(bill.total_amount)
                         }}</td>

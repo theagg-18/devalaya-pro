@@ -90,7 +90,9 @@ def init_db():
         CREATE TABLE IF NOT EXISTS bills (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             bill_no TEXT UNIQUE,
+            bill_seq INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            scheduled_date DATE,
             cashier_id INTEGER,
             printer_id INTEGER,
             total_amount REAL NOT NULL,
@@ -101,6 +103,16 @@ def init_db():
             FOREIGN KEY(cashier_id) REFERENCES users(id)
         )
     ''') 
+
+    # Migration: Add scheduled_date if missing
+    c.execute("PRAGMA table_info(bills)")
+    columns = [row[1] for row in c.fetchall()]
+    if 'scheduled_date' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN scheduled_date DATE")
+    
+    # Migration: Add bill_seq if missing (safety check)
+    if 'bill_seq' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN bill_seq INTEGER")
 
     # 6. Bill Items
     c.execute('''

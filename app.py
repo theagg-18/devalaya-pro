@@ -13,6 +13,32 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(cashier_bp)
 
+@app.context_processor
+def inject_settings():
+    from database import get_db
+    from routes.cashier import STARS
+    import datetime
+    
+    star_map = {s['eng']: s['mal'] for s in STARS}
+    
+    with app.app_context():
+        try:
+            db = get_db()
+            settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+            return {
+                'temple_settings': settings,
+                'now_year': datetime.datetime.now().year,
+                'stars': STARS,
+                'star_map': star_map
+            }
+        except:
+            return {
+                'temple_settings': None,
+                'now_year': datetime.datetime.now().year,
+                'stars': STARS,
+                'star_map': star_map
+            }
+
 # Register Database Teardown
 app.teardown_appcontext(close_db)
 
