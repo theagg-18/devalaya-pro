@@ -101,12 +101,29 @@ def history():
     sql = "SELECT * FROM bills WHERE cashier_id = ? AND status != 'draft'"
     params = [g.user['id']]
     
+    # Date Filter Logic (Same as Admin Reports)
+    date_filter = request.args.get('date')
+    
     if query:
-        # Search by Bill No or Devotee Name
+        # Search by Bill No or Devotee Name (Global Search)
         sql += ' AND (bill_no LIKE ? OR devotee_name LIKE ?)'
         wildcard = f'%{query}%'
         params.extend([wildcard, wildcard])
         
+        # Explicitly clear date filter so UI shows we searched everywhere
+        date_filter = ''
+    else:
+        if date_filter:
+            sql += ' AND date(created_at) = ?'
+            params.append(date_filter)
+        else:
+            # Default to today
+            import datetime
+            today = datetime.date.today().isoformat()
+            sql += ' AND date(created_at) = ?'
+            params.append(today)
+            date_filter = today
+
     sql += ' ORDER BY created_at DESC LIMIT 50'
     
     bills = db.execute(sql, params).fetchall()
@@ -122,9 +139,55 @@ def history():
             JOIN puja_master pm ON bi.puja_id = pm.id 
             WHERE bi.bill_id = ?
         ''', (bill['id'],)).fetchall()
+        
+        # Format Dates
+        try:
+             from datetime import datetime as dt, timezone
+             
+             # Format created_at
+             if b_dict.get('created_at'):
+                 raw_ts = b_dict['created_at']
+                 if isinstance(raw_ts, str):
+                     # Handle potential ISO format with or without T, and microseconds
+                     # Simple approach: try parsing common formats
+                     try:
+                        ts_obj = dt.strptime(raw_ts, '%Y-%m-%d %H:%M:%S')
+                     except ValueError:
+                        try:
+                            # Try with T separator
+                            ts_obj = dt.strptime(raw_ts, '%Y-%m-%dT%H:%M:%S')
+                        except ValueError:
+                             # Try with microseconds
+                             ts_obj = dt.strptime(raw_ts.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                     
+                     # Convert UTC (DB Default) to System Local Time
+                     local_ts = ts_obj.replace(tzinfo=timezone.utc).astimezone()
+                     b_dict['created_at'] = local_ts.strftime('%d-%m-%Y %I:%M %p')
+                 elif isinstance(raw_ts, dt):
+                      # If it's already a datetime object, assume it's naive UTC from SQL
+                      local_ts = raw_ts.replace(tzinfo=timezone.utc).astimezone()
+                      b_dict['created_at'] = local_ts.strftime('%d-%m-%Y %I:%M %p')
+
+             # Format scheduled_date
+             if b_dict.get('scheduled_date'):
+                 raw_date = b_dict['scheduled_date']
+                 if isinstance(raw_date, str):
+                     try:
+                        date_obj = dt.strptime(raw_date, '%Y-%m-%d')
+                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+                     except:
+                        pass # Keep original string if parse fails
+                 elif hasattr(raw_date, 'strftime'):
+                     b_dict['scheduled_date'] = raw_date.strftime('%d-%m-%Y')
+                     
+        except Exception as e:
+            print(f"Date formatting error: {e}")
+            import traceback
+            traceback.print_exc()
+            
         bill_list.append(b_dict)
     
-    return render_template('cashier/history.html', bills=bill_list, query=query)
+    return render_template('cashier/history.html', bills=bill_list, query=query, date_filter=date_filter)
 
 @cashier_bp.route('/billing/mode/<mode>')
 @login_required
@@ -195,6 +258,21 @@ def update_cart():
         item_id = int(data['id'])
         cart['items'] = [i for i in cart['items'] if i['id'] != item_id]
 
+    elif data['action'] == 'update_quantity':
+        item_id = int(data['id'])
+        new_qty = int(data['count'])
+        
+        if new_qty <= 0:
+            # Remove item if quantity is zero or less
+            cart['items'] = [i for i in cart['items'] if i['id'] != item_id]
+        else:
+            # Update quantity
+            for item in cart['items']:
+                if item['id'] == item_id:
+                    item['count'] = new_qty
+                    item['total'] = new_qty * item['amount']
+                    break
+
     # Recalculate global total
     cart['total'] = sum(i['total'] for i in cart['items'])
     session['cart'] = cart
@@ -209,9 +287,25 @@ def add_to_batch():
     if not cart or not cart['items']:
         return {'status': 'error', 'message': 'Cart is empty'}
 
+    data = request.json or {}
+    replication_dates = data.get('dates', []) # List of "YYYY-MM-DD" strings
+
     batch = session.get('batch', [])
-    # Append current cart as a bill entry
-    batch.append(cart)
+    
+    if replication_dates:
+        # Replicate Mode
+        import copy
+        count_added = 0
+        for date_str in replication_dates:
+            # Deep copy to ensure unique objects
+            cart_copy = copy.deepcopy(cart)
+            cart_copy['scheduled_date'] = date_str
+            batch.append(cart_copy)
+            count_added += 1
+    else:
+        # Standard Single Add
+        batch.append(cart)
+    
     session['batch'] = batch
     
     # Clear cart but keep mode
@@ -493,26 +587,95 @@ def checkout():
         cut_cmd = "\n\n\n\x1dV\x00"
         
         if printer_name == 'WEB_BROWSER_PRINT':
-            # Format content for HTML display
-            # Wrap each slip in a div with page-break-after
-            html_body = ""
-            for slip in print_slips:
-                html_body += f'<div class="slip"><pre>{slip}</pre></div>'
+            # Prepare data for template
+            slips_data = [] # List of slip dictionaries
             
-            html_content = f"""
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: monospace; font-size: 14px; width: 300px; margin: 0 auto; }}
-                    .slip {{ margin-bottom: 20px; page-break-after: always; padding-bottom: 20px; border-bottom: 1px dashed #ccc; }}
-                    pre {{ white-space: pre-wrap; margin: 0; }}
-                </style>
-            </head>
-            <body style="margin: 0; padding: 20px;">
-                {html_body}
-            </body>
-            </html>
-            """
+            # Helper to create slip data object
+            def create_slip_data(b_no, d_name, d_star, items, scheduled_date=None):
+                total = sum(i.get('total', 0) for i in items)
+                
+                # Format Scheduled Date
+                s_date_str = None
+                if scheduled_date:
+                    try:
+                        from datetime import datetime as dt
+                        s_date_str = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                    except:
+                        s_date_str = str(scheduled_date)
+                        
+                # Star Translation
+                star_map = {s['eng']: s['mal'] for s in STARS}
+                star_disp = star_map.get(d_star, d_star)
+                
+                return {
+                    'bill_no': b_no,
+                    'devotee_name': d_name,
+                    'star': star_disp,
+                    'scheduled_date': s_date_str,
+                    'line_items': items,
+                    'total': total
+                }
+
+            if group_by == 'devotee':
+                for i, bill_data in enumerate(items_to_process):
+                    b_id = bill_ids[i]
+                    dev_name = bill_data.get('devotee_name') or "Devotee"
+                    dev_star = bill_data.get('star') or ""
+                    scheduled_date = bill_data.get('scheduled_date')
+                    
+                    # Iterate each item for "One Puja = One Slip"
+                    for item in bill_data['items']:
+                        # Single item slip
+                        slips_data.append(create_slip_data(b_id, dev_name, dev_star, [item], scheduled_date))
+
+            elif group_by == 'puja':
+                # Consolidate by Item Type Logic (Complex, sticking to simple list for now)
+                # Re-using the same consolidation logic from before?
+                # The previous logic was: One slip per item occurrence but sorted? 
+                # "One Puja = One Page" implies independent slips.
+                # So we just iterate all items across all bills.
+                
+                all_entries = []
+                for idx, bill_data in enumerate(items_to_process):
+                    b_num = bill_ids[idx]
+                    d_name = bill_data.get('devotee_name')
+                    d_star = bill_data.get('star')
+                    s_date = bill_data.get('scheduled_date')
+                    
+                    for item in bill_data['items']:
+                        all_entries.append({
+                            'bill_no': b_num,
+                            'devotee_name': d_name,
+                            'star': d_star,
+                            'scheduled_date': s_date,
+                            'item': item # Single item
+                        })
+                
+                # Sort by Item Name
+                all_entries.sort(key=lambda x: x['item']['name'])
+                
+                for entry in all_entries:
+                    slips_data.append(create_slip_data(
+                        entry['bill_no'], 
+                        entry['devotee_name'], 
+                        entry['star'], 
+                        [entry['item']], 
+                        entry['scheduled_date']
+                    ))
+            
+            # Render Template from DB
+            from flask import render_template_string
+            
+            # Ensure template content exists, else fallback? (DB init ensures it, but safe to check)
+            template_content = settings['print_template_content']
+            if not template_content:
+                # Fallback purely for safety if migration failed
+                template_content = "<h1>Error: No Print Template Found. Contact Admin.</h1>"
+                
+            html_content = render_template_string(template_content, 
+                                         slips=slips_data, 
+                                         settings=settings, 
+                                         timestamp=timestamp)
             
             db.commit()
             if is_batch: session.pop('batch', None)
@@ -551,3 +714,113 @@ def resume_client_draft():
     session['cart'] = data['cart']
     session.modified = True
     return {'status': 'success'}
+
+@cashier_bp.route('/billing/reprint/<int:bill_id>', methods=['POST'])
+@login_required
+def reprint_bill(bill_id):
+    db = get_db()
+    
+    # 1. Fetch Bill
+    bill = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
+    if not bill:
+        return {'status': 'error', 'message': 'Bill not found'}
+        
+    # 2. Fetch Items
+    items = db.execute('''
+        SELECT bi.*, pm.name 
+        FROM bill_items bi 
+        JOIN puja_master pm ON bi.puja_id = pm.id 
+        WHERE bi.bill_id = ?
+    ''', (bill['id'],)).fetchall()
+    
+    # 3. Fetch Settings
+    settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+    
+    # 4. Prepare Data for Template
+    import datetime
+    from flask import render_template_string
+    
+    # Determine timestamp to show (Original print time or Now? "Reprint" usually implies copy)
+    # Let's show "Reprinted: <Now>" or just original details?
+    # Requirement: "Reprint" usually duplicates original.
+    # But usually receipts show create time. Let's use original create time.
+    timestamp = bill['created_at'] # String from DB
+    try:
+         from datetime import datetime as dt, timezone
+         
+         if timestamp:
+             if isinstance(timestamp, str):
+                 try:
+                    ts_obj = dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+                 except ValueError:
+                    try:
+                        ts_obj = dt.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
+                    except ValueError:
+                         try:
+                             ts_obj = dt.strptime(timestamp.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                         except:
+                             ts_obj = None
+                 
+                 if ts_obj:
+                     # Convert UTC to Local
+                     local_ts = ts_obj.replace(tzinfo=timezone.utc).astimezone()
+                     timestamp = local_ts.strftime('%d-%m-%Y %H:%M')
+             elif isinstance(timestamp, dt):
+                  local_ts = timestamp.replace(tzinfo=timezone.utc).astimezone()
+                  timestamp = local_ts.strftime('%d-%m-%Y %H:%M')
+
+    except Exception as e:
+         print(f"Reprint Date Error: {e}")
+         pass # Keep original if parse fails
+    
+    # Convert DB Items to Dict list matching template expectation
+    line_items = []
+    for item in items:
+        # DB columns: count, total, price_snapshot... template needs: name, count, total
+        line_items.append({
+            'name': item['name'],
+            'count': item['count'],
+            'total': item['total']
+        })
+        
+    # Star Translation
+    star_map = {s['eng']: s['mal'] for s in STARS}
+    star_disp = star_map.get(bill['star'], bill['star'])
+    
+    # Format Scheduled Date
+    scheduled_date = bill['scheduled_date']
+    s_date_str = None
+    if scheduled_date:
+        try:
+             from datetime import datetime as dt
+             if isinstance(scheduled_date, str):
+                 try:
+                    s_date_str = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                 except:
+                    s_date_str = scheduled_date
+             elif hasattr(scheduled_date, 'strftime'):
+                 s_date_str = scheduled_date.strftime('%d-%m-%Y')
+        except:
+             s_date_str = str(scheduled_date)
+
+    slip_data = {
+        'bill_no': bill['bill_no'],
+        'devotee_name': bill['devotee_name'],
+        'star': star_disp,
+        'scheduled_date': s_date_str,
+        'line_items': line_items,
+        'total': bill['total_amount']
+    }
+    
+    # 5. Render
+    template_content = settings['print_template_content']
+    if not template_content:
+        template_content = "<h1>Error: Print Template Missing</h1>"
+        
+    # Note: Template expects 'slips' as a LIST of slips
+    html_content = render_template_string(template_content, 
+                                 slips=[slip_data], 
+                                 settings=settings, 
+                                 timestamp=timestamp)
+                                 
+    return {'status': 'print_web', 'content': html_content}

@@ -2,6 +2,10 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 import sqlite3
 from database import get_db
 from modules.printers import printer_manager
+import os
+import datetime
+from config import Config
+from flask import send_file
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -15,7 +19,84 @@ def require_super_user():
 
 @admin_bp.route('/')
 def index():
-    return render_template('admin/dashboard.html')
+    db = get_db()
+    
+    # 1. Today's Total
+    today = datetime.date.today().isoformat()
+    today_total = db.execute('SELECT SUM(total_amount) FROM bills WHERE date(created_at) = ?', (today,)).fetchone()[0] or 0
+    
+    # 2. This Month's Total
+    today_date = datetime.date.today()
+    month_start = today_date.replace(day=1).isoformat()
+    month_total = db.execute('SELECT SUM(total_amount) FROM bills WHERE date(created_at) >= ?', (month_start,)).fetchone()[0] or 0
+
+    # 3. Revenue Trend (Last 30 Days)
+    thirty_days_ago_date = today_date - datetime.timedelta(days=29)
+    thirty_days_ago = thirty_days_ago_date.isoformat()
+    
+    trend_data = db.execute('''
+        SELECT date(created_at) as day, SUM(total_amount) as total
+        FROM bills 
+        WHERE date(created_at) >= ?
+        GROUP BY day
+        ORDER BY day
+    ''', (thirty_days_ago,)).fetchall()
+    
+    trend_dict = {row['day']: row['total'] for row in trend_data}
+    
+    trend_dates = []
+    trend_revenues = []
+    
+    curr = thirty_days_ago_date
+    while curr <= today_date:
+        d_str = curr.isoformat()
+        trend_dates.append(curr.strftime('%b %d')) # Format: Jan 01
+        trend_revenues.append(trend_dict.get(d_str, 0))
+        curr += datetime.timedelta(days=1)
+
+    # 4. Popular Vazhipadus (Top 5 Last 30 Days)
+    top_items_data = db.execute('''
+        SELECT pm.name, SUM(bi.count) as count
+        FROM bill_items bi
+        JOIN puja_master pm ON bi.puja_id = pm.id
+        JOIN bills b ON bi.bill_id = b.id
+        WHERE date(b.created_at) >= ?
+        GROUP BY pm.name
+        ORDER BY count DESC
+        LIMIT 5
+    ''', (thirty_days_ago,)).fetchall()
+    
+    top_item_names = [row['name'] for row in top_items_data]
+    top_item_counts = [row['count'] for row in top_items_data]
+
+    # 5. Peak Hours (Last 30 Days)
+    # Using substr for sqlite compatibility if strftime behaves oddly, but strftime('%H', ...) is standard sqlite
+    peak_hours_data = db.execute('''
+        SELECT strftime('%H', created_at) as hour, COUNT(*) as count
+        FROM bills
+        WHERE date(created_at) >= ?
+        GROUP BY hour
+        ORDER BY hour
+    ''', (thirty_days_ago,)).fetchall()
+    
+    hours_map = {int(row['hour']): row['count'] for row in peak_hours_data if row['hour'] is not None}
+    
+    # Hours of operation typically 5 AM to 9 PM (05 to 21)
+    hours_labels = []
+    hours_counts = []
+    for h in range(5, 22): 
+        hours_labels.append(f"{h:02d}:00")
+        hours_counts.append(hours_map.get(h, 0))
+
+    return render_template('admin/dashboard.html',
+                           today_total=today_total,
+                           month_total=month_total,
+                           trend_dates=trend_dates,
+                           trend_revenues=trend_revenues,
+                           top_item_names=top_item_names,
+                           top_item_counts=top_item_counts,
+                           hours_labels=hours_labels,
+                           hours_counts=hours_counts)
 
 @admin_bp.route('/settings', methods=('GET', 'POST'))
 def settings():
@@ -27,11 +108,14 @@ def settings():
         name_eng = request.form['name_eng']
         place = request.form['place']
         footer = request.form['receipt_footer']
+        template_content = request.form['print_template_content']
+        subtitle_mal = request.form.get('subtitle_mal', '')
+        subtitle_eng = request.form.get('subtitle_eng', '')
         backup = 1 if 'backup_enabled' in request.form else 0
         
         db.execute(
-            'UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=? WHERE id=1',
-            (name_mal, name_eng, place, footer, backup)
+            'UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, print_template_content=?, subtitle_mal=?, subtitle_eng=? WHERE id=1',
+            (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng)
         )
         db.commit()
         flash('Settings updated successfully', 'success')
@@ -214,16 +298,14 @@ def reports():
     '''
     params = []
     
-    # If searching, ignore date filter (usually user wants to find specific bill across time)
-    # OR follow search + date if both provided. Let's do optional date.
+    # If searching, ignore date filter completely (Global Search)
     if search_query:
         query += ' AND (b.bill_no LIKE ? OR b.devotee_name LIKE ?)'
         wildcard = f'%{search_query}%'
         params.extend([wildcard, wildcard])
         
-        if date_filter:
-            query += ' AND date(b.created_at) = ?'
-            params.append(date_filter)
+        # Explicitly clear date filter so UI shows we searched everywhere
+        date_filter = ''
     else:
         if date_filter:
             query += ' AND date(b.created_at) = ?'
@@ -292,7 +374,38 @@ def export_reports():
         mimetype="text/csv",
         headers={"Content-disposition": f"attachment; filename=report_{date_filter}.csv"}
     )
-@admin_bp.route('/backup/trigger', methods=['POST'])
+@admin_bp.route('/backups')
+def backups():
+    import os
+    from config import Config
+    import datetime
+    
+    # Ensure backup directory exists
+    if not os.path.exists(Config.BACKUP_PATH):
+        try:
+            os.makedirs(Config.BACKUP_PATH)
+        except OSError:
+            pass
+            
+    # List files
+    backup_files = []
+    if os.path.exists(Config.BACKUP_PATH):
+        for filename in os.listdir(Config.BACKUP_PATH):
+            if filename.endswith('.db'):
+                filepath = os.path.join(Config.BACKUP_PATH, filename)
+                stat = os.stat(filepath)
+                backup_files.append({
+                    'name': filename,
+                    'size': f"{stat.st_size / (1024*1024):.2f} MB",
+                    'created_at': datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                })
+    
+    # Sort by created_at desc
+    backup_files.sort(key=lambda x: x['created_at'], reverse=True)
+    
+    return render_template('admin/backups.html', backups=backup_files)
+
+@admin_bp.route('/backups/trigger', methods=['POST'])
 def trigger_backup():
     import shutil
     import datetime
@@ -304,32 +417,178 @@ def trigger_backup():
             os.makedirs(Config.BACKUP_PATH)
             
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"backup_{timestamp}.db"
+        backup_filename = f"temple_backup_{timestamp}.db"
         backup_path = os.path.join(Config.BACKUP_PATH, backup_filename)
         
-        # Lock DB? WAL mode allows hot backup usually, but safest is to copy using SQLite API or just shutil if file lock permits
-        # SQLite Online Backup API is best but shutil works for WAL often if careful.
-        # Ideally: use sqlite3 connection.backup()
-        
         db = get_db()
-        # We need the underlying connection object, not the row wrapper if possible, or just open new raw connection
-        import sqlite3
-        
         # Use Python's sqlite3 backup API
+        # Connect to destination
+        import sqlite3
         bck = sqlite3.connect(backup_path)
         db.backup(bck)
         bck.close()
         
-        # Check cloud backup setting
-        settings = db.execute('SELECT backup_enabled FROM temple_settings WHERE id=1').fetchone()
-        cloud_msg = ""
-        if settings['backup_enabled']:
-             # Placeholder for cloud upload
-             cloud_msg = " (Cloud upload skipped in offline mode)"
-             
-        flash(f'Backup created successfully: {backup_filename}{cloud_msg}', 'success')
+        flash(f'Backup created successfully: {backup_filename}', 'success')
         
     except Exception as e:
         flash(f'Backup failed: {e}', 'error')
         
-    return redirect(url_for('admin.settings'))
+    # Redirect back to where we came from if possible, or support both settings and backups page
+    # simpliest is just go to backups page now
+    return redirect(url_for('admin.backups'))
+
+@admin_bp.route('/backups/download/<filename>')
+def download_backup(filename):
+    from config import Config
+    import os
+    
+    safe_filename = os.path.basename(filename)
+    file_path = os.path.join(Config.BACKUP_PATH, safe_filename)
+    
+    if not os.path.exists(file_path):
+        flash('File not found', 'error')
+        return redirect(url_for('admin.backups'))
+        
+    return send_file(file_path, as_attachment=True)
+
+@admin_bp.route('/backups/delete/<filename>', methods=['POST'])
+def delete_backup(filename):
+    from config import Config
+    import os
+    
+    safe_filename = os.path.basename(filename)
+    file_path = os.path.join(Config.BACKUP_PATH, safe_filename)
+    
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            flash(f'Backup deleted: {safe_filename}', 'success')
+        else:
+            flash('File not found', 'error')
+    except Exception as e:
+        flash(f'Error deleting file: {e}', 'error')
+        
+    return redirect(url_for('admin.backups'))
+
+@admin_bp.route('/backups/restore/<filename>', methods=['POST'])
+def restore_backup(filename):
+    from config import Config
+    import os
+    import sqlite3
+    
+    safe_filename = os.path.basename(filename)
+    backup_path = os.path.join(Config.BACKUP_PATH, safe_filename)
+    
+    if not os.path.exists(backup_path):
+        flash('Backup file not found.', 'error')
+        return redirect(url_for('admin.backups'))
+        
+    try:
+        # Online Restore using SQLite Backup API
+        # 1. Open connection to source (backup file)
+        src = sqlite3.connect(backup_path)
+        
+        # 2. Open connection to destination (current DB)
+        # We need the direct file path from Config, or get it from active app
+        # Config.DB_PATH is reliable here
+        dst = sqlite3.connect(Config.DB_PATH)
+        
+        # 3. Perform backup from Source -> Dest
+        with dst:
+            src.backup(dst)
+            
+        dst.close()
+        src.close()
+        
+        flash(f'Database restored successfully from {safe_filename}.', 'success')
+        
+    except Exception as e:
+        flash(f'Restore failed: {e}', 'error')
+        
+    return redirect(url_for('admin.backups'))
+
+@admin_bp.route('/backups/upload', methods=['POST'])
+def upload_backup():
+    from werkzeug.utils import secure_filename
+    from config import Config
+    import os
+    
+    if 'backup_file' not in request.files:
+        flash('No file part', 'error')
+        return redirect(url_for('admin.backups'))
+        
+    file = request.files['backup_file']
+    
+    if file.filename == '':
+        flash('No selected file', 'error')
+        return redirect(url_for('admin.backups'))
+        
+    if file and file.filename.endswith('.db'):
+        filename = secure_filename(file.filename)
+        # Ensure unique name if exists, or just overwrite?
+        # Appending timestamp usually safer if user uploads generic 'temple.db'
+        # But user might want specific name. Let's keep name but ensure backup path exists.
+        
+        if not os.path.exists(Config.BACKUP_PATH):
+            os.makedirs(Config.BACKUP_PATH)
+            
+        save_path = os.path.join(Config.BACKUP_PATH, filename)
+        file.save(save_path)
+        flash(f'Backup uploaded successfully: {filename}', 'success')
+    else:
+        flash('Invalid file type. Only .db files are allowed.', 'error')
+        
+    return redirect(url_for('admin.backups'))
+
+@admin_bp.route('/backups/reset', methods=['POST'])
+def reset_database():
+    import os
+    import datetime
+    from config import Config
+    import sqlite3
+    from database import init_db, get_db
+    
+    # 1. Force Backup First
+    try:
+        if not os.path.exists(Config.BACKUP_PATH):
+            os.makedirs(Config.BACKUP_PATH)
+            
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"pre_reset_backup_{timestamp}.db"
+        backup_path = os.path.join(Config.BACKUP_PATH, backup_filename)
+        
+        # Connect to current DB and backup
+        db = get_db()
+        bck = sqlite3.connect(backup_path)
+        db.backup(bck)
+        bck.close()
+        
+    except Exception as e:
+        flash(f'Reset cancelled: Critical backup failed ({e})', 'error')
+        return redirect(url_for('admin.backups'))
+        
+    # 2. Drop all tables
+    try:
+        # We need a fresh connection to drop everything or use existing
+        # Disable foreign keys to allow dropping tables
+        db.execute('PRAGMA foreign_keys=OFF;')
+        
+        # Get all tables
+        tables = db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        for table in tables:
+            if table[0] != 'sqlite_sequence': # Optional: keep sequence or not? Better to drop.
+                db.execute(f"DROP TABLE IF EXISTS {table[0]}")
+                
+        db.commit()
+        
+        # 3. Re-initialize
+        init_db()
+        
+        flash(f'Database has been reset to factory settings. A backup was saved as {backup_filename}.', 'success')
+        
+    except Exception as e:
+        flash(f'Reset failed: {e}', 'error')
+        
+    return redirect(url_for('admin.backups'))
+
+
