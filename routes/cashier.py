@@ -77,7 +77,7 @@ STARS = [
     {"eng": "Uthram", "mal": "ഉത്രം"},
     {"eng": "Atham", "mal": "അത്തം"},
     {"eng": "Chithira", "mal": "ചിത്തിര"},
-    {"eng": "Swathi (Choti)", "mal": "ചോതി (സ്വാതി)"},
+    {"eng": "Choti", "mal": "ചോതി"},
     {"eng": "Vishakham", "mal": "വിശാഖം"},
     {"eng": "Anizham", "mal": "അനിഴം"},
     {"eng": "Thrikketta", "mal": "തൃക്കേട്ട"},
@@ -98,7 +98,7 @@ def history():
     db = get_db()
     query = request.args.get('q', '')
     
-    sql = 'SELECT * FROM bills WHERE cashier_id = ?'
+    sql = "SELECT * FROM bills WHERE cashier_id = ? AND status != 'draft'"
     params = [g.user['id']]
     
     if query:
@@ -152,7 +152,6 @@ def start_billing(mode):
     # Mode 1: Puja (Vazhipadu). Mode 2: Items/Donation.
     type_filter = 'puja' if mode == 'vazhipadu' else 'item'
     items = db.execute('SELECT * FROM puja_master WHERE type = ? ORDER BY name', (type_filter,)).fetchall()
-    
     return render_template('cashier/billing.html', mode=mode, stars=STARS, items=items, 
                            cart=session.get('cart', {'items': [], 'total': 0}), 
                            batch=session.get('batch', []))
@@ -545,96 +544,10 @@ def checkout():
             f.write(traceback.format_exc())
         return {'status': 'error', 'message': str(e)}
 
-@cashier_bp.route('/billing/draft/save', methods=['POST'])
+@cashier_bp.route('/billing/cart/resume-draft', methods=['POST'])
 @login_required
-def save_draft():
-    db = get_db()
-    cart = session.get('cart')
-    
-    if not cart or not cart['items']:
-        return {'status': 'error', 'message': 'Cart is empty'}
-
-    try:
-        name = cart.get('devotee_name')
-        star = cart.get('star')
-        b_type = cart.get('mode', 'vazhipadu')
-        
-        # 1. Create Bill with status 'draft'
-        cursor = db.execute(
-            '''INSERT INTO bills (cashier_id, printer_id, total_amount, devotee_name, star, status, type)
-               VALUES (?, ?, ?, ?, ?, 'draft', ?)''', 
-            (g.user['id'], None, cart['total'], name, star, b_type)
-        )
-        bill_id = cursor.lastrowid
-        
-        # 2. Generate Draft Bill No
-        import datetime
-        year = datetime.datetime.now().year
-        bill_no = f"DRAFT-{year}-{bill_id}" # Distinct format
-        
-        db.execute('UPDATE bills SET bill_no = ? WHERE id = ?', (bill_no, bill_id))
-        
-        # 3. Add Items
-        for item in cart['items']:
-            db.execute(
-                '''INSERT INTO bill_items (bill_id, puja_id, price_snapshot, count, total)
-                   VALUES (?, ?, ?, ?, ?)''',
-                (bill_id, item['id'], item['amount'], item['count'], item['total'])
-            )
-            
-        db.commit()
-        
-        # Clear Cart
-        session.pop('cart', None)
-        
-        return {'status': 'success', 'bill_no': bill_no}
-        
-    except Exception as e:
-        import traceback
-        with open('debug_error.log', 'w') as f:
-            f.write(str(e))
-            f.write(traceback.format_exc())
-            
-        print(f"SAVE DRAFT ERROR: {e}")
-        return {'status': 'error', 'message': f"Server Error: {str(e)}"}
-
-@cashier_bp.route('/billing/draft/resume/<int:bill_id>')
-@login_required
-def resume_draft(bill_id):
-    db = get_db()
-    
-    # Fetch Bill
-    bill = db.execute('SELECT * FROM bills WHERE id = ? AND cashier_id = ?', (bill_id, g.user['id'])).fetchone()
-    if not bill:
-        flash("Draft not found", "error")
-        return redirect(url_for('cashier.history'))
-        
-    # Fetch Items
-    items = db.execute('SELECT * FROM bill_items WHERE bill_id = ?', (bill_id,)).fetchall()
-    
-    # Reconstruct Cart
-    cart_items = []
-    for item in items:
-        # Fetch name from master
-        name = db.execute('SELECT name FROM puja_master WHERE id = ?', (item['puja_id'],)).fetchone()[0]
-        
-        cart_items.append({
-            'id': item['puja_id'],
-            'name': name,
-            'amount': item['price_snapshot'],
-            'count': item['count'],
-            'total': item['total']
-        })
-        
-    session['cart'] = {
-        'draft_id': bill['id'], # Store ID to reuse
-        'mode': bill['type'], # 'vazhipadu' or 'donation'
-        'devotee_name': bill['devotee_name'],
-        'star': bill['star'],
-        'items': cart_items,
-        'total': bill['total_amount']
-    }
+def resume_client_draft():
+    data = request.json
+    session['cart'] = data['cart']
     session.modified = True
-    
-    flash("Draft Resumed!", "success")
-    return redirect(url_for('cashier.start_billing', mode=bill['type']))
+    return {'status': 'success'}

@@ -59,6 +59,26 @@
             }
             return true;
         }
+
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                // Dimiss on click
+                alert.addEventListener('click', () => {
+                    alert.style.animation = 'fadeOut 0.3s ease-out forwards';
+                    setTimeout(() => alert.remove(), 300);
+                });
+
+                // Auto dismiss after 5 seconds
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.style.animation = 'fadeOut 0.3s ease-out forwards';
+                        setTimeout(() => alert.remove(), 300);
+                    }
+                }, 5000);
+            });
+        });
     </script>
 </body>
 
