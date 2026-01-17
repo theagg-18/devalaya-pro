@@ -12,11 +12,13 @@
 
     <!-- Search Form -->
     <div class="card" style="margin-bottom: 2rem; padding: 1.5rem;">
-        <form action="" method="get" style="display: flex; gap: 1rem;">
+        <form action="" method="get" style="display: flex; gap: 1rem; align-items: center;">
             <input type="text" name="q" placeholder="Search by Bill No or Name..." value="{{ query }}"
                 style="flex: 1; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+            <input type="date" name="date" value="{{ date_filter }}"
+                style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px;">
             <button type="submit" class="btn btn-primary">Search</button>
-            {% if query %}
+            {% if query or date_filter %}
             <a href="{{ url_for('cashier.history') }}" class="btn btn-secondary"
                 style="display: flex; align-items: center;">Clear</a>
             {% endif %}
@@ -90,10 +92,16 @@
                             bill.status|title }}</span>
                         {% endif %}
                     </td>
+                    <td style="padding: 1rem; text-align: center;">
+                        <button onclick="reprintBill('{{ bill.id }}')" title="Reprint"
+                            style="background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            🖨️
+                        </button>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                    <td colspan="6" style="padding: 3rem; text-align: center; color: var(--text-muted);">
                         No billing history found.
                     </td>
                 </tr>
@@ -102,4 +110,50 @@
         </table>
     </div>
 </div>
+
+<script>
+    async function api(url, data) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return await res.json();
+    }
+
+    async function reprintBill(billId) {
+        if (!confirm("Reprint Bill ID " + billId + "?")) return;
+
+        try {
+            const res = await api('/cashier/billing/reprint/' + billId, {});
+
+            if (res.status === 'print_web') {
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                document.body.appendChild(iframe);
+
+                const doc = iframe.contentWindow.document;
+                doc.open();
+                doc.write(res.content);
+                doc.close();
+
+                iframe.contentWindow.focus();
+                setTimeout(() => {
+                    iframe.contentWindow.print();
+                    // Optional: Remove iframe or show notification
+                }, 500);
+            } else {
+                alert("Error: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Reprint failed");
+        }
+    }
+</script>
 {% endblock %}

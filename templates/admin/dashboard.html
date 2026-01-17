@@ -1,9 +1,239 @@
 {% extends "admin/layout.html" %}
 
 {% block admin_content %}
-<div class="card">
-    <h2>Admin Dashboard</h2>
-    <p>Welcome to the administration panel of <strong>{{ temple_settings.name_eng if temple_settings else 'the temple'
-            }}</strong>.</p>
+<div class="dashboard-header">
+    <div class="welcome-section">
+        <h2>Admin Dashboard</h2>
+        <p>Overview of temple performance and statistics.</p>
+    </div>
+    <div class="date-display">
+        {{ now }}
+    </div>
 </div>
+
+<!-- Summary Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">₹</div>
+        <div class="stat-details">
+            <h3>Today's Collection</h3>
+            <p class="stat-value">₹ {{ "%.2f"|format(today_total) }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-details">
+            <h3>This Month</h3>
+            <p class="stat-value">₹ {{ "%.2f"|format(month_total) }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="charts-container">
+    <!-- Revenue Trend -->
+    <div class="chart-card full-width">
+        <h3>Revenue Trend (Last 30 Days)</h3>
+        <canvas id="revenueChart"></canvas>
+    </div>
+
+    <div class="charts-row">
+        <!-- Popular Items -->
+        <div class="chart-card half-width">
+            <h3>Top 5 Vazhipadus</h3>
+            <canvas id="itemsChart"></canvas>
+        </div>
+
+        <!-- Peak Hours -->
+        <div class="chart-card half-width">
+            <h3>Peak Activity (Hours)</h3>
+            <canvas id="hoursChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        background: #f0f7ff;
+        color: #0066cc;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .stat-details h3 {
+        margin: 0;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .stat-value {
+        margin: 5px 0 0 0;
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .charts-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .charts-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .chart-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-card h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 16px;
+        color: #444;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+
+    .full-width {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .half-width {
+        flex: 1;
+        min-width: 300px;
+        /* Responsive: stack on small screens */
+    }
+
+    canvas {
+        width: 100% !important;
+        max-height: 300px;
+    }
+</style>
+
+<script>
+    // Data passed from Flask
+    const trendDates = {{ trend_dates| tojson }};
+    const trendRevenues = {{ trend_revenues| tojson }};
+
+    const itemNames = {{ top_item_names| tojson }};
+    const itemCounts = {{ top_item_counts| tojson }};
+
+    const hoursLabels = {{ hours_labels| tojson }};
+    const hoursCounts = {{ hours_counts| tojson }};
+
+    // 1. Revenue Chart
+    const ctxRevenue = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctxRevenue, {
+        type: 'line',
+        data: {
+            labels: trendDates,
+            datasets: [{
+                label: 'Daily Revenue (₹)',
+                data: trendRevenues,
+                borderColor: '#0066cc',
+                backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) { return '₹' + value; }
+                    }
+                }
+            }
+        }
+    });
+
+    // 2. Top Items Chart
+    const ctxItems = document.getElementById('itemsChart').getContext('2d');
+    new Chart(ctxItems, {
+        type: 'bar',
+        indexAxis: 'y', // Horizontal bar
+        data: {
+            labels: itemNames,
+            datasets: [{
+                label: 'Count',
+                data: itemCounts,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // 3. Peak Hours Chart
+    const ctxHours = document.getElementById('hoursChart').getContext('2d');
+    new Chart(ctxHours, {
+        type: 'bar',
+        data: {
+            labels: hoursLabels,
+            datasets: [{
+                label: 'Bills Generated',
+                data: hoursCounts,
+                backgroundColor: '#4BC0C0'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
 {% endblock %}

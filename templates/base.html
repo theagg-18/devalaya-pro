@@ -24,6 +24,9 @@
         <nav>
             {% if g.user %}
             <a href="/dashboard">Dashboard</a>
+            {% if g.user.role == 'cashier' %}
+            <a href="{{ url_for('cashier.history') }}">History</a>
+            {% endif %}
             <a href="/logout">Logout ({{ g.user.username }})</a>
             {% else %}
             <a href="/login" class="btn btn-primary">Login</a>

@@ -21,9 +21,31 @@
         </div>
 
         <div class="form-group">
+            <label for="subtitle_mal">Subtitle (Malayalam)</label>
+            <input type="text" id="subtitle_mal" name="subtitle_mal" value="{{ settings.subtitle_mal or '' }}"
+                placeholder="ഉപശീർഷകം">
+        </div>
+
+        <div class="form-group">
+            <label for="subtitle_eng">Subtitle (English) / Reg No.</label>
+            <input type="text" id="subtitle_eng" name="subtitle_eng" value="{{ settings.subtitle_eng or '' }}"
+                placeholder="Subtitle / Reg No">
+        </div>
+
+        <div class="form-group">
             <label for="receipt_footer">Receipt Footer Message</label>
-            <textarea id="receipt_footer" name="receipt_footer" rows="3"
+            <textarea id="receipt_footer" name="receipt_footer" rows="2"
                 style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px;">{{ settings.receipt_footer }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="print_template_content">Print Receipt Template (HTML)</label>
+            <p style="font-size: 0.8rem; color: #64748b; margin-top: -4px; margin-bottom: 8px;">
+                Use Jinja2 variables: <code>slip.bill_no</code>, <code>slip.devotee_name</code>,
+                <code>slip.items</code>, etc.
+            </p>
+            <textarea id="print_template_content" name="print_template_content" rows="15"
+                style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 13px;">{{ settings.print_template_content }}</textarea>
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
@@ -39,4 +61,6 @@
         </div>
     </form>
 </div>
+
+
 {% endblock %}
