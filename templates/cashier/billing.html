@@ -8,8 +8,9 @@
     <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding: 0;">
         <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0;">Select {{ 'Pujas' if mode == 'vazhipadu' else 'Items' }}</h3>
-                <input type="text" id="searchBox" placeholder="Search..."
+                <h3 style="margin: 0;">Select {{ 'Vazhipadu' if mode == 'vazhipadu' else 'Items' }} (തിരഞ്ഞെടുക്കുക)
+                </h3>
+                <input type="text" id="searchBox" placeholder="Search (തിരയുക)..."
                     style="max-width: 200px; padding: 6px 12px; font-size: 0.9rem;" onkeyup="filterItems()">
             </div>
         </div>
@@ -61,18 +62,24 @@
         <div style="padding: 1rem; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
             {% if mode == 'vazhipadu' %}
             <div class="form-group">
-                <label style="font-size: 0.85rem;">Devotee Name</label>
+                <label style="font-size: 0.85rem;">ഭക്തന്റെ പേര് (Devotee Name)</label>
                 <input type="text" id="devName" value="{{ cart.devotee_name }}" onblur="updateDetails()"
-                    placeholder="Name">
+                    placeholder="പേര് (NAME)">
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.85rem;">Star</label>
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label style="font-size: 0.85rem;">Star (നാൾ)</label>
                 <select id="devStar" onchange="updateDetails()">
-                    <option value="">Select Star</option>
+                    <option value="">Select Star (നാൾ)</option>
                     {% for star in stars %}
-                    <option value="{{ star }}" {% if cart.star==star %}selected{% endif %}>{{ star }}</option>
+                    <option value="{{ star.eng }}" {% if cart.star==star.eng %}selected{% endif %}>
+                        {{ star.mal }} ({{ star.eng }})
+                    </option>
                     {% endfor %}
                 </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-size: 0.85rem;">Vazhipadu Date</label>
+                <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}" onchange="updateDetails()">
             </div>
             {% else %}
             <h3 style="margin: 0; color: var(--primary);">Donation Mode</h3>
@@ -102,7 +109,7 @@
         <div style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
             <div
                 style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.25rem; font-weight: 700;">
-                <span>Total</span>
+                <span>Total (ആകെ)</span>
                 <span id="cartTotal">₹{{ "%.0f"|format(cart.total|default(0)) }}</span>
             </div>
 
@@ -144,8 +151,9 @@
                 <div style="min-width: 0;">
                     <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
                         bill['devotee_name'] or 'No Name' }}</div>
-                    <div style="font-size: 0.85rem; color: #64748b;">{{ bill['star'] }} • {{ bill['items']|length }}
-                        items
+                    <div style="font-size: 0.85rem; color: #64748b;">
+                        {{ star_map.get(bill['star'], bill['star']) }} {% if bill['star'] in star_map %}({{ bill['star']
+                        }}){% endif %} • {{ bill['items']|length }} items
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -182,7 +190,7 @@
                 style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
                 <input type="radio" name="printGroup" value="puja" checked>
                 <div style="min-width: 0;">
-                    <strong>Group by Puja (Default)</strong>
+                    <strong>Group by Vazhipadu (Default)</strong>
                     <div class="text-muted" style="font-size: 0.8rem; white-space: normal;">Sorted by Item used for
                         Sanctum</div>
                 </div>
@@ -317,8 +325,9 @@
         if (MODE !== 'vazhipadu') return;
         const name = document.getElementById('devName').value;
         const star = document.getElementById('devStar').value;
+        const scheduled_date = document.getElementById('scheduledDate').value;
         await api('/cashier/billing/cart/update', {
-            action: 'set_details', name, star
+            action: 'set_details', name, star, scheduled_date
         });
     }
 
@@ -330,6 +339,7 @@
         if (MODE === 'vazhipadu') {
             document.getElementById('devName').value = '';
             document.getElementById('devStar').value = '';
+            document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
         }
     }
 
@@ -358,6 +368,9 @@
             if (MODE === 'vazhipadu') {
                 document.getElementById('devName').value = '';
                 document.getElementById('devStar').value = '';
+                // Keep the date as is, usually user batches for same date? 
+                // Or reset to today? Let's reset to today for safety.
+                document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('devName').focus(); // Ready for next devotee
             }
 
@@ -611,6 +624,15 @@
 
         if (cart.items.length === 0) {
             container.innerHTML = '<p class="text-center text-muted" style="margin-top:2rem;">Cart is empty</p>';
+        }
+    }
+
+    // Initialize
+    if (MODE === 'vazhipadu') {
+        const dateInput = document.getElementById('scheduledDate');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+            updateDetails();
         }
     }
 </script>

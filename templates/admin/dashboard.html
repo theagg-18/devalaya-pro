@@ -3,6 +3,7 @@
 {% block admin_content %}
 <div class="card">
     <h2>Admin Dashboard</h2>
-    <p>Welcome to the temple administration panel.</p>
+    <p>Welcome to the administration panel of <strong>{{ temple_settings.name_eng if temple_settings else 'the temple'
+            }}</strong>.</p>
 </div>
 {% endblock %}

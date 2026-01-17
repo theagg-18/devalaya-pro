@@ -7,7 +7,7 @@ A robust, offline-first billing system designed for Raspberry Pi servers in temp
 - **Offline-First**: Works entirely without internet.
 - **Role-Based Access**: Admin and Cashier roles.
 - **Multi-Mode Billing**:
-  - **Vazhipadu**: Devotee Name, Star, Multiple Pujas.
+  - **Vazhipadu**: Devotee Name, Star, Multiple Vazhipadu.
   - **Donation**: Quick Item + Amount billing.
 - **Batch Printing**: Group multiple devotees into a single print job.
 - **Printer Management**: Smart CUPS integration with online status checks.

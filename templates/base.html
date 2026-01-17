@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Devalaya Pro{% endblock %}</title>
+    <title>{% block title %}{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}{% endblock %}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +19,7 @@
 <body>
     <header>
         <a href="/" class="brand">
-            🔱 <span>Devalaya Pro</span>
+            🔱 <span>{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</span>
         </a>
         <nav>
             {% if g.user %}
@@ -46,7 +46,8 @@
     </main>
 
     <footer class="text-center" style="padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
-        <p>&copy; {{ now_year }} Devalaya Pro. All Rights Reserved.</p>
+        <p>&copy; {{ now_year }} {{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</p>
+        <p style="margin-top: 0.5rem; opacity: 0.7;">Powered by Devalaya Pro</p>
     </footer>
 
     {% block scripts %}{% endblock %}

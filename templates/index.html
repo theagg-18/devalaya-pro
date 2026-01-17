@@ -2,10 +2,15 @@
 
 {% block content %}
 <div class="text-center" style="padding: 4rem 0;">
-    <h1 style="font-size: 3rem; margin-bottom: 1rem;">Devalaya Pro</h1>
-    <p style="font-size: 1.25rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 2rem;">
-        Fast, offline-first billing system designed for Raspberry Pi.
+    <p style="font-size: 1.1rem; color: var(--accent); font-weight: 600; margin-bottom: 0.5rem;">
+        {{ temple_settings.receipt_footer if temple_settings else '' }}
     </p>
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.2;">
+        {{ temple_settings.name_mal if temple_settings else 'Devalaya Pro' }}
+    </h1>
+    <h2 style="font-size: 1.2rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2rem;">
+        {{ temple_settings.name_eng if temple_settings else 'Temple Billing & Management' }}
+    </h2>
     <div style="display: flex; gap: 1rem; justify-content: center;">
         <a href="/login" class="btn btn-primary" style="padding: 12px 32px; font-size: 1.1rem;">Cashier Login</a>
         <a href="/admin" class="btn btn-secondary" style="padding: 12px 32px; font-size: 1.1rem;">Admin Portal</a>

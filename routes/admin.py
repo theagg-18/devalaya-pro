@@ -202,10 +202,11 @@ def reports():
     
     # Filter params
     date_filter = request.args.get('date', None)
+    search_query = request.args.get('q', '')
     
     query = '''
         SELECT 
-            b.id, b.bill_no, b.created_at, b.total_amount, b.devotee_name, b.star,
+            b.*,
             u.username as cashier_name
         FROM bills b
         JOIN users u ON b.cashier_id = u.id
@@ -213,26 +214,54 @@ def reports():
     '''
     params = []
     
-    if date_filter:
-        query += ' AND date(b.created_at) = ?'
-        params.append(date_filter)
-    else:
-        # Default to today
-        import datetime
-        today = datetime.date.today().isoformat()
-        query += ' AND date(b.created_at) = ?'
-        params.append(today)
-        date_filter = today
+    # If searching, ignore date filter (usually user wants to find specific bill across time)
+    # OR follow search + date if both provided. Let's do optional date.
+    if search_query:
+        query += ' AND (b.bill_no LIKE ? OR b.devotee_name LIKE ?)'
+        wildcard = f'%{search_query}%'
+        params.extend([wildcard, wildcard])
         
-    query += ' ORDER BY b.created_at DESC'
+        if date_filter:
+            query += ' AND date(b.created_at) = ?'
+            params.append(date_filter)
+    else:
+        if date_filter:
+            query += ' AND date(b.created_at) = ?'
+            params.append(date_filter)
+        else:
+            # Default to today
+            import datetime
+            today = datetime.date.today().isoformat()
+            query += ' AND date(b.created_at) = ?'
+            params.append(today)
+            date_filter = today
+        
+    query += ' ORDER BY b.created_at DESC LIMIT 100'
     
     bills = db.execute(query, params).fetchall()
     
-    # Calculate totals
-    total_amount = sum(b['total_amount'] for b in bills)
-    count = len(bills)
+    # Fetch items for each bill for full transparency
+    bill_list = []
+    for bill in bills:
+        b_dict = dict(bill)
+        b_dict['line_items'] = db.execute('''
+            SELECT bi.*, pm.name 
+            FROM bill_items bi 
+            JOIN puja_master pm ON bi.puja_id = pm.id 
+            WHERE bi.bill_id = ?
+        ''', (bill['id'],)).fetchall()
+        bill_list.append(b_dict)
     
-    return render_template('admin/reports.html', bills=bills, total_amount=total_amount, count=count, date_filter=date_filter)
+    # Calculate totals
+    total_amount = sum(b['total_amount'] for b in bill_list)
+    count = len(bill_list)
+    
+    return render_template('admin/reports.html', 
+                           bills=bill_list, 
+                           total_amount=total_amount, 
+                           count=count, 
+                           date_filter=date_filter,
+                           search_query=search_query)
 
 @admin_bp.route('/reports/export')
 def export_reports():

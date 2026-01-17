@@ -63,9 +63,33 @@ def release_printer():
 # --- Billing Logic ---
 
 STARS = [
-    "Ashwati", "Bharani", "Karthika", "Rohini", "Makayiram", "Thiruvathira", "Punartham", "Pooyam", "Ayilyam",
-    "Makam", "Pooram", "Uthram", "Atham", "Chithira", "Choti", "Vishakham", "Anizham", "Thrikketta",
-    "Moolam", "Puradam", "Uthradam", "Thiruvonam", "Avittam", "Chathayam", "Poororuttathi", "Uthrattathi", "Revathi"
+    {"eng": "Ashwati", "mal": "അശ്വതി"},
+    {"eng": "Bharani", "mal": "ഭരണി"},
+    {"eng": "Karthika", "mal": "കാർത്തിക"},
+    {"eng": "Rohini", "mal": "രോഹിണി"},
+    {"eng": "Makayiram", "mal": "മകയിരം"},
+    {"eng": "Thiruvathira", "mal": "തിരുവാതിര"},
+    {"eng": "Punartham", "mal": "പുണർതം"},
+    {"eng": "Pooyam", "mal": "പൂയം"},
+    {"eng": "Ayilyam", "mal": "ആയില്യം"},
+    {"eng": "Makam", "mal": "മകം"},
+    {"eng": "Pooram", "mal": "പൂരം"},
+    {"eng": "Uthram", "mal": "ഉത്രം"},
+    {"eng": "Atham", "mal": "അത്തം"},
+    {"eng": "Chithira", "mal": "ചിത്തിര"},
+    {"eng": "Swathi (Choti)", "mal": "ചോതി (സ്വാതി)"},
+    {"eng": "Vishakham", "mal": "വിശാഖം"},
+    {"eng": "Anizham", "mal": "അനിഴം"},
+    {"eng": "Thrikketta", "mal": "തൃക്കേട്ട"},
+    {"eng": "Moolam", "mal": "മൂലം"},
+    {"eng": "Pooradam", "mal": "പൂരാടം"},
+    {"eng": "Uthradam", "mal": "ഉത്രാടം"},
+    {"eng": "Thiruvonam", "mal": "തിരുവോണം"},
+    {"eng": "Avittam", "mal": "അവിട്ടം"},
+    {"eng": "Chathayam", "mal": "ചതയം"},
+    {"eng": "Pooruruttathi", "mal": "പൂരുരുട്ടാതി"},
+    {"eng": "Uthrattathi", "mal": "ഉത്രട്ടാതി"},
+    {"eng": "Revathi", "mal": "രേവതി"}
 ]
 
 @cashier_bp.route('/history')
@@ -87,7 +111,20 @@ def history():
     
     bills = db.execute(sql, params).fetchall()
     
-    return render_template('cashier/history.html', bills=bills, query=query)
+    # Fetch items for each bill
+    bill_list = []
+    for bill in bills:
+        # Convert row to dict to add items
+        b_dict = dict(bill)
+        b_dict['line_items'] = db.execute('''
+            SELECT bi.*, pm.name 
+            FROM bill_items bi 
+            JOIN puja_master pm ON bi.puja_id = pm.id 
+            WHERE bi.bill_id = ?
+        ''', (bill['id'],)).fetchall()
+        bill_list.append(b_dict)
+    
+    return render_template('cashier/history.html', bills=bill_list, query=query)
 
 @cashier_bp.route('/billing/mode/<mode>')
 @login_required
@@ -130,11 +167,12 @@ def update_cart():
     
     if data['action'] == 'init':
         # Preserve details if changing modes? No, clear mostly.
-        cart = {'mode': data['mode'], 'items': [], 'total': 0, 'devotee_name': '', 'star': ''}
+        cart = {'mode': data['mode'], 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': ''}
         
     elif data['action'] == 'set_details':
         cart['devotee_name'] = data.get('name', '')
         cart['star'] = data.get('star', '')
+        cart['scheduled_date'] = data.get('scheduled_date', '')
         
     elif data['action'] == 'add':
         item_id = int(data['id'])
@@ -178,7 +216,7 @@ def add_to_batch():
     session['batch'] = batch
     
     # Clear cart but keep mode
-    session['cart'] = {'mode': cart.get('mode', 'vazhipadu'), 'items': [], 'total': 0, 'devotee_name': '', 'star': ''}
+    session['cart'] = {'mode': cart.get('mode', 'vazhipadu'), 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': ''}
     session.modified = True
     
     return {'status': 'success', 'batch_count': len(batch)}
@@ -283,6 +321,7 @@ def checkout():
             
             # Insert with Status
             status = 'printed' 
+            scheduled_date = bill_data.get('scheduled_date')
             
             if draft_id:
                 # REUSE existing Draft
@@ -291,9 +330,9 @@ def checkout():
                 # Update Draft to Printed
                 db.execute(
                     '''UPDATE bills SET 
-                       printer_id=?, total_amount=?, devotee_name=?, star=?, status='printed', type=?, created_at=CURRENT_TIMESTAMP
+                       printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=CURRENT_TIMESTAMP
                        WHERE id=?''', 
-                    (c_session['printer_id'], bill_data['total'], name, star, b_type, bill_id)
+                    (c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, bill_id)
                 )
                 
                 # Delete old items to overwrite with new cart state (in case edited)
@@ -301,12 +340,12 @@ def checkout():
                 
             else:
                 # Create NEW Bill
-                cursor = db.execute(
-                    '''INSERT INTO bills (cashier_id, printer_id, total_amount, devotee_name, star, status, type)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)''', 
-                    (g.user['id'], c_session['printer_id'], bill_data['total'], name, star, status, b_type)
+                cur = db.execute(
+                    '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (None, current_seq_counter, g.user['id'], c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, status)
                 )
-                bill_id = cursor.lastrowid
+                bill_id = cur.lastrowid
             
             # GENERATE SEQUENTIAL BILL NUMBER
             current_seq_counter += 1
@@ -363,10 +402,27 @@ def checkout():
         print_slips = [] # Store individual slips
         
         # Helper to format slip text
-        def format_slip(b_id, d_name, d_star, items, timestamp, header, footer):
+        def format_slip(b_id, d_name, d_star, items, timestamp, header, footer, scheduled_date=None):
             slip = f"{header}\n"
             slip += f"Bill: {b_id} | {timestamp}\n"
-            slip += f"Name: {d_name}  Star: {d_star}\n"
+            
+            # Print Scheduled Date
+            if scheduled_date:
+                try:
+                    from datetime import datetime as dt
+                    s_dt = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                    slip += f"Vazhipadu Date: {s_dt}\n"
+                except:
+                    slip += f"Vazhipadu Date: {scheduled_date}\n"
+
+            # Malayalam Star Translation
+            star_map = {s['eng']: s['mal'] for s in STARS}
+            star_disp = star_map.get(d_star, d_star)
+            if star_disp != d_star:
+                slip += f"Name: {d_name}\nStar: {star_disp} ({d_star})\n"
+            else:
+                slip += f"Name: {d_name}  Star: {d_star}\n"
+                
             slip += "--------------------------------\n"
             for item in items:
                 slip += f"{item['name']}\n"
@@ -380,17 +436,12 @@ def checkout():
                 b_id = bill_ids[i]
                 dev_name = bill_data.get('devotee_name') or "Devotee"
                 dev_star = bill_data.get('star') or ""
+                scheduled_date = bill_data.get('scheduled_date')
                 
-                # One slip per bill (listing all items)
-                # Wait, earlier loop was "One slip per Item" inside the bill?
-                # "One puja = one page" requirement check.
-                # If the user wants 1 page per Puja, then we iterate items.
-                
+                # Iterate each item for "One Puja = One Slip"
                 for item in bill_data['items']:
-                   # One slip per line item
-                   # Re-using singular logic
-                   single_item_slip = format_slip(b_id, dev_name, dev_star, [item], timestamp, header, footer)
-                   print_slips.append(single_item_slip)
+                    single_item_slip = format_slip(b_id, dev_name, dev_star, [item], timestamp, header, footer, scheduled_date)
+                    print_slips.append(single_item_slip)
 
         elif group_by == 'puja':
              # ... (Same logic, but grouping items differently)
@@ -407,7 +458,8 @@ def checkout():
                         'devotee': d_name,
                         'star': d_star,
                         'qty': item['count'],
-                        'total': item['total']
+                        'total': item['total'],
+                        'scheduled_date': bill_data.get('scheduled_date')
                     })
             all_items.sort(key=lambda x: x['name'])
             
@@ -420,7 +472,8 @@ def checkout():
                     [item], # Pass single item as list
                     timestamp, 
                     header, 
-                    footer
+                    footer,
+                    item.get('scheduled_date')
                 )
                 print_slips.append(slip)
         
