@@ -15,6 +15,11 @@
                 <input type="password" id="pin" name="pin" required>
             </div>
 
+            <div class="form-group">
+                <label for="captcha">Verify: <strong>{{ captcha_q }} = ?</strong></label>
+                <input type="number" id="captcha" name="captcha_answer" placeholder="Enter result" required>
+            </div>
+
             <button type="submit" class="btn btn-primary"
                 style="width: 100%; margin-top: 1rem; padding: 12px;">Login</button>
         </form>

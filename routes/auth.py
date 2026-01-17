@@ -6,21 +6,31 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=('GET', 'POST'))
 def login():
+    import random
     if request.method == 'POST':
         username = request.form['username']
         pin = request.form['pin']
+        captcha_answer = request.form.get('captcha_answer')
+        
         db = get_db()
         error = None
-        user = db.execute(
-            'SELECT * FROM users WHERE username = ?', (username,)
-        ).fetchone()
+        
+        # Verify Captcha
+        stored_answer = session.get('captcha_result')
+        if not captcha_answer or str(captcha_answer) != str(stored_answer):
+            error = 'Invalid CAPTCHA answer.'
+        
+        if error is None:
+            user = db.execute(
+                'SELECT * FROM users WHERE username = ?', (username,)
+            ).fetchone()
 
-        if user is None:
-            error = 'Incorrect username.'
-        elif user['pin'] != pin:
-            error = 'Incorrect PIN.'
-        elif not user['is_active']:
-            error = 'Account Deactivated. Contact Admin.'
+            if user is None:
+                error = 'Incorrect username.'
+            elif user['pin'] != pin:
+                error = 'Incorrect PIN.'
+            elif not user['is_active']:
+                error = 'Account Deactivated. Contact Admin.'
 
         if error is None:
             session.clear()
@@ -34,7 +44,12 @@ def login():
 
         flash(error, 'error')
 
-    return render_template('login.html')
+    # Generate new captcha for the next attempt
+    num1 = random.randint(1, 9)
+    num2 = random.randint(1, 9)
+    session['captcha_result'] = num1 + num2
+    
+    return render_template('login.html', captcha_q=f"{num1} + {num2}")
 
 @auth_bp.route('/logout')
 def logout():

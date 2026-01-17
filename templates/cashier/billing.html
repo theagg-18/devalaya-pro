@@ -58,6 +58,22 @@
         </div>
         {% endif %}
 
+        <!-- Browser Drafts Section (Rendered via JS) -->
+        <div id="draftsSection"
+            style="display: none; padding: 1rem; background: #fffbeb; border-bottom: 1px solid #fde68a;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <label
+                    style="font-size: 0.75rem; color: #92400e; font-weight: 700; text-transform: uppercase; margin: 0;">Pending
+                    Drafts</label>
+                <button onclick="clearAllDrafts()"
+                    style="background: none; border: none; color: #ef4444; font-size: 0.7rem; font-weight: 600; cursor: pointer;">Clear
+                    All</button>
+            </div>
+            <div id="draftsList" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem;">
+                <!-- Rendered via JS -->
+            </div>
+        </div>
+
         <!-- Devotee Details Form -->
         <div style="padding: 1rem; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
             {% if mode == 'vazhipadu' %}
@@ -68,15 +84,14 @@
             </div>
             <div class="form-group" style="margin-bottom: 0.75rem;">
                 <label style="font-size: 0.85rem;">Star (നാൾ)</label>
-                <select id="devStar" onchange="updateDetails()">
-                    <option value="">Select Star (നാൾ)</option>
-                    {% for star in stars %}
-                    <option value="{{ star.eng }}" {% if cart.star==star.eng %}selected{% endif %}>
-                        {{ star.mal }} ({{ star.eng }})
-                    </option>
-                    {% endfor %}
-                </select>
+                <div class="autocomplete-container">
+                    <input type="text" id="devStar" value="{{ cart.star }}" onblur="setTimeout(updateDetails, 200)"
+                        onfocus="showStars()" oninput="filterStars()" placeholder="🔍 Search Star (നാൾ)..."
+                        autocomplete="off">
+                    <div id="starResults" class="autocomplete-results"></div>
+                </div>
             </div>
+
             <div class="form-group" style="margin-bottom: 0;">
                 <label style="font-size: 0.85rem;">Vazhipadu Date</label>
                 <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}" onchange="updateDetails()">
@@ -113,20 +128,25 @@
                 <span id="cartTotal">₹{{ "%.0f"|format(cart.total|default(0)) }}</span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
-                <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                     <button onclick="clearCart()" class="btn btn-secondary"
                         style="border-color: #ef4444; color: #ef4444; flex: 1;">Clear</button>
                     <button onclick="saveDraft()" class="btn btn-secondary" title="Save as Draft"
                         style="border-color: #f59e0b; color: #f59e0b; flex: 1;">Save Draft</button>
                 </div>
 
-                {% if mode == 'vazhipadu' %}
-                <button onclick="addToBatch()" class="btn btn-primary">Add to Batch</button>
-                {% else %}
-                <button onclick="processDirectPrint()" class="btn btn-primary"
-                    style="background: #22c55e; border-color: #22c55e;">Print Receipt</button>
-                {% endif %}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    {% if mode == 'vazhipadu' %}
+                    <button onclick="addToBatch()" class="btn btn-secondary"
+                        style="border-color: var(--primary); color: var(--primary); flex: 1;">Add to Batch</button>
+                    <button onclick="processDirectPrint()" class="btn btn-primary"
+                        style="background: #22c55e; border-color: #22c55e; flex: 1;">Print Receipt</button>
+                    {% else %}
+                    <button onclick="processDirectPrint()" class="btn btn-primary"
+                        style="background: #22c55e; border-color: #22c55e; grid-column: span 2;">Print Receipt</button>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -267,6 +287,7 @@
 
 {% block scripts %}
 <script>
+    const ALL_STARS = {{ stars | tojson | safe }};
     const MODE = '{{ mode }}';
 
     function filterItems() {
@@ -580,32 +601,131 @@
         }
     }
 
-    async function saveDraft() {
-        // Removed confirm to prevent blocking issues
+    const DRAFTS_KEY = 'devalaya_billing_sessions';
+    let CURRENT_CART = {{ cart | tojson | safe }};
 
-        const btn = document.querySelector('button[title="Save as Draft"]');
-        const originalText = btn.innerText;
-        btn.innerText = 'Saving...';
-        btn.disabled = true;
+    function renderDrafts() {
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const now = Date.now();
+        const twelveHours = 12 * 60 * 60 * 1000;
+
+        // Auto-delete drafts older than 12 hours
+        const validDrafts = drafts.filter(d => (now - d.timestamp) < twelveHours);
+        if (validDrafts.length !== drafts.length) {
+            localStorage.setItem(DRAFTS_KEY, JSON.stringify(validDrafts));
+        }
+
+        const modeDrafts = validDrafts.filter(d => d.cart.mode === MODE);
+        const section = document.getElementById('draftsSection');
+        const list = document.getElementById('draftsList');
+
+        if (modeDrafts.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+        list.innerHTML = modeDrafts.map(d => {
+            const name = d.cart.devotee_name || 'Quick Bill';
+            const total = d.cart.total;
+            const time = new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            return `
+                <div style="position: relative; min-width: 130px;">
+                    <div onclick="resumeDraft('${d.id}')" title="Saved at ${time}"
+                        style="display: flex; flex-direction: column; background: white; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; cursor: pointer; box-shadow: var(--shadow-sm); height: 100%;">
+                        <span style="font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 15px;">
+                            ${name}
+                        </span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                            <span style="font-size: 0.7rem; color: #b45309;">₹${total}</span>
+                            <span style="font-size: 0.6rem; color: #94a3b8;">${time}</span>
+                        </div>
+                    </div>
+                    <button onclick="discardDraft(event, '${d.id}')" 
+                        style="position: absolute; top: 2px; right: 2px; background: #fee2e2; color: #ef4444; border: none; border-radius: 4px; width: 22px; height: 22px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                        ✕
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function saveDraft() {
+        if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
+            alert("Cart is empty");
+            return;
+        }
+
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const newDraft = {
+            id: 'dr_' + Date.now(),
+            timestamp: Date.now(),
+            cart: { ...CURRENT_CART, mode: MODE }
+        };
+
+        drafts.unshift(newDraft);
+        localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+
+        // Clear server cart and reload
+        await api('/cashier/billing/cart/update', { action: 'init', mode: MODE });
+        location.reload();
+    }
+
+    async function resumeDraft(id) {
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const draft = drafts.find(d => d.id === id);
+        if (!draft) return;
 
         try {
-            const res = await api('/cashier/billing/draft/save', {});
+            const res = await api('/cashier/billing/cart/resume-draft', { cart: draft.cart });
             if (res.status === 'success') {
-                alert(`Draft Saved! Ref No: ${res.bill_no}`);
-                location.reload();
-            } else {
-                alert("Server Error: " + res.message);
+                // Remove from drafts once resumed
+                const remaining = drafts.filter(d => d.id !== id);
+                localStorage.setItem(DRAFTS_KEY, JSON.stringify(remaining));
+                window.location.reload();
             }
         } catch (e) {
-            console.error(e);
-            alert("Client Error: " + e.message);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
+            console.error("Resume error:", e);
+            alert("Failed to resume session. Please try again.");
         }
     }
 
+    function discardDraft(e, id) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Confirm dialogs are blocked on some devices/kiosks, removing to ensure functionality
+        // if (!window.confirm("Discard this session?")) return;
+
+        try {
+            const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+            const remaining = drafts.filter(d => String(d.id) !== String(id));
+            localStorage.setItem(DRAFTS_KEY, JSON.stringify(remaining));
+
+            // Re-render and also refresh the UI section
+            renderDrafts();
+
+            // If it was the last one, the section will hide via renderDrafts
+        } catch (err) {
+            console.error("Discard error:", err);
+            // Fallback: clear and reload if anything fails
+            window.location.reload();
+        }
+    }
+
+    function clearAllDrafts() {
+        // if (!confirm("Discard ALL pending sessions for this mode?")) return;
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const remaining = drafts.filter(d => d.cart.mode !== MODE);
+        localStorage.setItem(DRAFTS_KEY, JSON.stringify(remaining));
+        renderDrafts();
+    }
+
     function renderCart(cart) {
+        CURRENT_CART = cart; // Keep client-side state in sync
         const container = document.getElementById('cartItems');
         container.innerHTML = cart.items.map(item => `
         <div class="cart-item">
@@ -615,7 +735,7 @@
             </div>
             <div style="text-align: right;">
                 <div style="font-weight: 600;">₹${item.total}</div>
-                <button onclick="handleRemoveFromCart(this)" data-id="${item.id}" style="color: #ef4444; background: none; border: none; font-size: 0.8rem; cursor: pointer;">Remove</button>
+                <button onclick="removeFromCart('${item.id}')" data-id="${item.id}" style="color: #ef4444; background: none; border: none; font-size: 0.8rem; cursor: pointer;">Remove</button>
             </div>
         </div>
     `).join('');
@@ -627,13 +747,68 @@
         }
     }
 
+    // Autocomplete Logic
+    function showStars() {
+        if (MODE !== 'vazhipadu') return;
+        filterStars();
+    }
+
+    function filterStars() {
+        const input = document.getElementById('devStar');
+        const results = document.getElementById('starResults');
+        const query = input.value.toLowerCase().trim();
+
+        results.classList.add('active');
+
+        const filtered = ALL_STARS.filter(s =>
+            s.eng.toLowerCase().includes(query) ||
+            s.mal.includes(query)
+        );
+
+        if (filtered.length === 0) {
+            results.innerHTML = '<div class="autocomplete-item text-muted">No results found</div>';
+            return;
+        }
+
+        results.innerHTML = filtered.map(s => `
+            <div class="autocomplete-item" onclick="selectStar('${s.mal}')">
+                <span>${s.mal}</span>
+                <span class="eng-hint">${s.eng}</span>
+            </div>
+        `).join('');
+    }
+
+    function selectStar(val) {
+        const input = document.getElementById('devStar');
+        input.value = val;
+        hideStars();
+        updateDetails();
+    }
+
+    function hideStars() {
+        setTimeout(() => {
+            const results = document.getElementById('starResults');
+            if (results) results.classList.remove('active');
+        }, 300);
+    }
+
     // Initialize
+    renderDrafts();
+
     if (MODE === 'vazhipadu') {
         const dateInput = document.getElementById('scheduledDate');
         if (dateInput && !dateInput.value) {
             dateInput.value = new Date().toISOString().split('T')[0];
             updateDetails();
         }
+
+        // Close results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete-container')) {
+                const res = document.getElementById('starResults');
+                if (res) res.classList.remove('active');
+            }
+        });
     }
 </script>
 {% endblock %}

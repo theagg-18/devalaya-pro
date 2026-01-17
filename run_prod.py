@@ -10,14 +10,17 @@ def start_production():
 
     if system == "Windows":
         try:
-            import waitress
+            from waitress import serve
+            from wsgi import app
             print("Running with Waitress (Windows Production Server)...")
             print("Access at http://localhost:5000")
-            subprocess.run(["waitress-serve", "--port=5000", "wsgi:app"])
+            serve(app, host='0.0.0.0', port=5000)
         except ImportError:
             print("Waitress not found. Installing...")
             subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
-            subprocess.run(["waitress-serve", "--port=5000", "wsgi:app"])
+            from waitress import serve
+            from wsgi import app
+            serve(app, host='0.0.0.0', port=5000)
     else:
         print("Running with Gunicorn (Linux Production Server)...")
         # For Linux/RPi, we use the config file we created
