@@ -4,6 +4,7 @@ from database import close_db, init_db
 from routes.admin import admin_bp
 from routes.auth import auth_bp
 from routes.cashier import cashier_bp
+from utils.timezone_utils import now_ist
 import os
 
 app = Flask(__name__)
@@ -27,7 +28,7 @@ def inject_settings():
             settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
             return {
                 'temple_settings': settings,
-                'now_year': datetime.datetime.now().year,
+                'now_year': now_ist().year,
                 'stars': STARS,
                 'star_map': star_map
             }
