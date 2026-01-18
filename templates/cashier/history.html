@@ -92,16 +92,20 @@
                             bill.status|title }}</span>
                         {% endif %}
                     </td>
-                    <td style="padding: 1rem; text-align: center;">
-                        <button onclick="reprintBill('{{ bill.id }}')" title="Reprint"
-                            style="background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                    <td style="padding: 1rem; text-align: center; white-space: nowrap;">
+                        <button onclick="reprintBill('{{ bill.id }}', 'default')" title="Print (Default)"
+                            style="background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 4px;">
                             🖨️
+                        </button>
+                        <button onclick="reprintBill('{{ bill.id }}', 'web')" title="View/Print PDF"
+                            style="background: #fdf2f8; color: #db2777; border: 1px solid #fce7f3; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            📄
                         </button>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                    <td colspan="7" style="padding: 3rem; text-align: center; color: var(--text-muted);">
                         No billing history found.
                     </td>
                 </tr>
@@ -113,27 +117,40 @@
 
 <script>
     async function api(url, data) {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        return await res.json();
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Server Error ${res.status}: ${text}`);
+            }
+            return await res.json();
+        } catch (err) {
+            throw err;
+        }
     }
 
-    async function reprintBill(billId) {
-        if (!confirm("Reprint Bill ID " + billId + "?")) return;
+    async function reprintBill(billId, mode = 'default') {
+        const action = mode === 'web' ? 'View/Expected Web Print' : 'Reprint to Default Printer';
+        if (!confirm(`${action} for Bill ID ${billId}?`)) return;
 
         try {
-            const res = await api('/cashier/billing/reprint/' + billId, {});
+            const res = await api('/cashier/billing/reprint/' + billId, { mode: mode });
 
             if (res.status === 'print_web') {
+                if (!res.content) {
+                    alert("Error: Print content is empty.");
+                    return;
+                }
                 const iframe = document.createElement('iframe');
                 iframe.style.position = 'fixed';
                 iframe.style.right = '0';
                 iframe.style.bottom = '0';
-                iframe.style.width = '0';
-                iframe.style.height = '0';
+                iframe.style.width = '0px';
+                iframe.style.height = '0px';
                 iframe.style.border = '0';
                 document.body.appendChild(iframe);
 
@@ -143,16 +160,20 @@
                 doc.close();
 
                 iframe.contentWindow.focus();
+
                 setTimeout(() => {
                     iframe.contentWindow.print();
-                    // Optional: Remove iframe or show notification
+                    // Cleanup disabled to prevent closing print dialog prematurely
+                    // setTimeout(() => document.body.removeChild(iframe), 5000); 
                 }, 500);
+            } else if (res.status === 'success') {
+                alert("Sent to printer successfully.");
             } else {
-                alert("Error: " + res.message);
+                alert("Error from Server: " + (res.message || "Unknown error"));
             }
         } catch (e) {
             console.error(e);
-            alert("Reprint failed");
+            alert("Reprint Request Failed: " + e.message);
         }
     }
 </script>

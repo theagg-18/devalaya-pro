@@ -6,6 +6,7 @@ import os
 import datetime
 from config import Config
 from flask import send_file
+from utils.timezone_utils import now_ist, format_ist_datetime
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -89,7 +90,7 @@ def index():
         hours_counts.append(hours_map.get(h, 0))
 
     return render_template('admin/dashboard.html',
-                           now=datetime.datetime.now().strftime("%d-%m-%Y %I:%M %p"),
+                           now=format_ist_datetime(now_ist(), "%d-%m-%Y %I:%M %p"),
                            today_total=today_total,
                            month_total=month_total,
                            trend_dates=trend_dates,
@@ -261,9 +262,18 @@ def items():
         
         elif 'delete_item' in request.form:
             item_id = request.form['item_id']
-            db.execute('DELETE FROM puja_master WHERE id = ?', (item_id,))
-            db.commit()
-            flash('Item deleted', 'success')
+            try:
+                # Try Hard Delete first (if unused)
+                db.execute('DELETE FROM puja_master WHERE id = ?', (item_id,))
+                db.commit()
+                flash('Item permanently deleted', 'success')
+            except sqlite3.IntegrityError:
+                # Fallback to Soft Delete (Archive)
+                db.execute('UPDATE puja_master SET is_active = 0 WHERE id = ?', (item_id,))
+                db.commit()
+                flash('Item archived because it has billing history (Soft Deleted)', 'warning')
+            except Exception as e:
+                flash(f'Error deleting item: {e}', 'error')
 
         elif 'edit_item' in request.form:
             item_id = request.form['item_id']
@@ -278,7 +288,7 @@ def items():
             except Exception as e:
                 flash(f'Error updating item: {e}', 'error')
 
-    items = db.execute('SELECT * FROM puja_master ORDER BY name').fetchall()
+    items = db.execute('SELECT * FROM puja_master WHERE is_active = 1 ORDER BY name').fetchall()
     return render_template('admin/items.html', items=items)
 
 @admin_bp.route('/reports')
@@ -417,7 +427,7 @@ def trigger_backup():
         if not os.path.exists(Config.BACKUP_PATH):
             os.makedirs(Config.BACKUP_PATH)
             
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = format_ist_datetime(now_ist(), "%Y%m%d_%H%M%S")
         backup_filename = f"temple_backup_{timestamp}.db"
         backup_path = os.path.join(Config.BACKUP_PATH, backup_filename)
         
@@ -554,7 +564,7 @@ def reset_database():
         if not os.path.exists(Config.BACKUP_PATH):
             os.makedirs(Config.BACKUP_PATH)
             
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = format_ist_datetime(now_ist(), "%Y%m%d_%H%M%S")
         backup_filename = f"pre_reset_backup_{timestamp}.db"
         backup_path = os.path.join(Config.BACKUP_PATH, backup_filename)
         

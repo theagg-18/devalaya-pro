@@ -2,16 +2,25 @@
 
 {% block content %}
 <div class="billing-container"
-    style="display: grid; grid-template-columns: 1fr 350px; gap: 2rem; height: calc(100vh - 120px);">
+    style="display: grid; grid-template-columns: 1fr 450px; gap: 2rem; height: calc(100vh - 90px);">
 
     <!-- Left Panel: Item Selection -->
     <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding: 0;">
         <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0;">Select {{ 'Vazhipadu' if mode == 'vazhipadu' else 'Items' }} (തിരഞ്ഞെടുക്കുക)
-                </h3>
-                <input type="text" id="searchBox" placeholder="Search (തിരയുക)..."
-                    style="max-width: 200px; padding: 6px 12px; font-size: 0.9rem;" onkeyup="filterItems()">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <h3 style="margin: 0; white-space: nowrap;">Select Item (തിരഞ്ഞെടുക്കുക)</h3>
+                <div
+                    style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                    <div class="filter-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-filter active" onclick="filterCategory('all')">All</button>
+                        <button class="btn-filter" onclick="filterCategory('puja')">Vazhipadu</button>
+                        <button class="btn-filter" onclick="filterCategory('item')">Donation</button>
+                    </div>
+                    <input type="text" id="searchBox" placeholder="Search (തിരയുക)..."
+                        style="width: 100%; max-width: 200px; padding: 6px 12px; font-size: 0.9rem; min-width: 150px;"
+                        onkeyup="filterItems()">
+                </div>
             </div>
         </div>
 
@@ -19,7 +28,8 @@
             style="padding: 1rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; align-content: start;">
             {% for item in items %}
             <button onclick="handleAddToCart(this)" class="item-btn" data-search="{{ item.name|lower }}"
-                data-id="{{ item.id }}" data-name="{{ item.name }}" data-amount="{{ item.amount }}">
+                data-type="{{ item.type }}" data-id="{{ item.id }}" data-name="{{ item.name }}"
+                data-amount="{{ item.amount }}">
                 <div class="item-name">{{ item.name }}</div>
                 <div class="item-price">₹{{ "%.0f"|format(item.amount) }}</div>
             </button>
@@ -29,10 +39,9 @@
 
     <!-- Right Panel: Cart & Details -->
     <div class="card"
-        style="display: flex; flex-direction: column; padding: 0; border: 2px solid var(--primary); position: relative;">
+        style="display: flex; flex-direction: column; padding: 0; border: 2px solid var(--primary); position: relative; height: 100%; overflow: hidden;">
 
         <!-- Batch Indicator -->
-        {% if mode == 'vazhipadu' %}
         <div id="batchIndicator"
             style="background: #1e293b; color: white; padding: 8px 16px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; gap: 8px; align-items: center;">
@@ -56,15 +65,14 @@
                 ALL</button>
             {% endif %}
         </div>
-        {% endif %}
 
         <!-- Browser Drafts Section (Rendered via JS) -->
         <div id="draftsSection"
             style="display: none; padding: 1rem; background: #fffbeb; border-bottom: 1px solid #fde68a;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <label
+                <span
                     style="font-size: 0.75rem; color: #92400e; font-weight: 700; text-transform: uppercase; margin: 0;">Pending
-                    Drafts</label>
+                    Drafts</span>
                 <button onclick="clearAllDrafts()"
                     style="background: none; border: none; color: #ef4444; font-size: 0.7rem; font-weight: 600; cursor: pointer;">Clear
                     All</button>
@@ -75,35 +83,34 @@
         </div>
 
         <!-- Devotee Details Form -->
-        <div style="padding: 1rem; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
-            {% if mode == 'vazhipadu' %}
-            <div class="form-group">
-                <label style="font-size: 0.85rem;">ഭക്തന്റെ പേര് (Devotee Name)</label>
-                <input type="text" id="devName" value="{{ cart.devotee_name }}" onblur="updateDetails()"
-                    placeholder="പേര് (NAME)">
-            </div>
-            <div class="form-group" style="margin-bottom: 0.75rem;">
-                <label style="font-size: 0.85rem;">Star (നാൾ)</label>
-                <div class="autocomplete-container">
-                    <input type="text" id="devStar" value="{{ cart.star }}" onblur="setTimeout(updateDetails, 200)"
-                        onfocus="showStars()" oninput="filterStars()" placeholder="🔍 Search Star (നാൾ)..."
-                        autocomplete="off">
-                    <div id="starResults" class="autocomplete-results"></div>
+        <div style="padding: 0.75rem; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="devName" style="font-size: 0.85rem;">ഭക്തന്റെ പേര്</label>
+                    <input type="text" id="devName" value="{{ cart.devotee_name }}" onblur="updateDetails()"
+                        placeholder="Name" style="font-size: 0.9rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="devStar" style="font-size: 0.85rem;">Star (നാൾ)</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="devStar" value="{{ cart.star }}" onblur="setTimeout(updateDetails, 200)"
+                            onfocus="showStars()" oninput="filterStars()" placeholder="Star" autocomplete="off"
+                            style="font-size: 0.9rem;">
+                        <div id="starResults" class="autocomplete-results"></div>
+                    </div>
                 </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.85rem;">Vazhipadu Date</label>
-                <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}" onchange="updateDetails()">
+                <label for="scheduledDate" style="font-size: 0.85rem;">Vazhipadu Date</label>
+                <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}" onchange="updateDetails()"
+                    style="font-size: 0.9rem; padding: 6px;">
             </div>
-            {% else %}
-            <h3 style="margin: 0; color: var(--primary);">Donation Mode</h3>
-            <p style="font-size: 0.9rem; color: var(--text-muted);">Quick billing active</p>
-            {% endif %}
         </div>
 
         <!-- Cart Items -->
-        <div id="cartItems" style="flex: 1; overflow-y: auto; padding: 1rem;">
+        <div id="cartItems"
+            style="flex: 1; overflow-y: auto; padding: 1rem; min-height: 0; display: flex; flex-direction: column;">
             <!-- Rendered via JS -->
             {% for item in cart['items'] %}
             <div class="cart-item">
@@ -142,8 +149,7 @@
         </div>
 
         <!-- Totals & Actions -->
-        <div class="billing-totals-section"
-            style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+        <div class="billing-totals-section" style="padding: 1rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
             <div
                 style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.25rem; font-weight: 700;">
                 <span>Total (ആകെ)</span>
@@ -159,20 +165,16 @@
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                    {% if mode == 'vazhipadu' %}
                     <div style="display: flex; gap: 0.5rem;">
                         <button onclick="addToBatch()" class="btn btn-secondary"
-                            style="border-color: var(--primary); color: var(--primary); flex: 1;">Add to Batch</button>
+                            style="border-color: var(--primary); color: var(--primary); flex: 1;">Add to
+                            Batch</button>
                         <button onclick="showReplicateModal()" class="btn btn-secondary"
                             title="Replicate to Multiple Dates"
                             style="border-color: #7e22ce; color: #7e22ce; flex: 0 0 auto;">📅+</button>
                     </div>
-                    <button onclick="processDirectPrint()" class="btn btn-primary"
+                    <button onclick="processUnifiedPrint()" class="btn btn-primary"
                         style="background: #22c55e; border-color: #22c55e; flex: 1;">Print Receipt</button>
-                    {% else %}
-                    <button onclick="processDirectPrint()" class="btn btn-primary"
-                        style="background: #22c55e; border-color: #22c55e; grid-column: span 2;">Print Receipt</button>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -415,6 +417,22 @@
         color: var(--text-main);
     }
 
+    /* Filter Controls */
+    .btn-filter {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .btn-filter.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
     /* Mobile Sticky Footer */
     @media (max-width: 768px) {
         .billing-totals-section {
@@ -526,16 +544,56 @@
         }
     }
 
+    let currentCategory = 'all';
+
+    function filterCategory(cat) {
+        currentCategory = cat;
+        // Update active class
+        document.querySelectorAll('.btn-filter').forEach(b => {
+            b.classList.remove('active');
+            if (b.innerText.toLowerCase() === cat || (cat === 'all' && b.innerText === 'All') || (cat === 'puja' && b.innerText === 'Vazhipadu') || (cat === 'item' && b.innerText === 'Donation')) {
+                b.classList.add('active');
+            }
+        });
+        filterItems();
+    }
+
     function filterItems() {
         const query = document.getElementById('searchBox').value.toLowerCase();
         document.querySelectorAll('.item-btn').forEach(btn => {
             const name = btn.dataset.search;
-            btn.style.display = name.includes(query) ? 'flex' : 'none';
+            const type = btn.dataset.type;
+            const matchesQuery = name.includes(query);
+            const matchesType = currentCategory === 'all' || type === currentCategory;
+            btn.style.display = (matchesQuery && matchesType) ? 'flex' : 'none';
         });
     }
 
+    function hasVazhipaduItems() {
+        // We need to check cart items. Since we don't have full object in JS memory always synced perfectly with types
+        // We can check the DOM or rely on the serverCart object if we keep it updated.
+        // Let's rely on server cart if possible, but for responsive UI let's check DOM or use a reliable way.
+        // Best way: check if any item in cart has type='puja'.
+        // BUT, cart items in DOM don't have type data.
+        // FIX: Let's assume user must enter name if they add a puja. 
+        // We can pass 'type' in renderCart function.
+        // For now, let's implement a safe check: if any item count > 0.
+        // Wait, the requirement is specific: Mandatory ONLY if Vazhipadu items exist.
+        // We need to know the type of items in the cart.
+        // I will add type to the cart item rendering or rely on a helper.
+        // Let's iterate `SERVER_DATA.cart.items` if available? No, we use `renderCart`.
+        // I'll stick to a simpler approach: Unify requires Name always? No, user said "Donation optional".
+        // I will add `data-type` to cart items.
+        // Actually, just fetching the cart from server response `res.cart` gives us items. 
+        // We need to ensure server sends `type` in cart items.
+        // `update_cart` in python appends `type`? No, currently it constructs dict from params.
+        // I should update `addToCart` to pass type or fetch it.
+        // Better: Pass `type` in `addToCart` to server, store in session cart.
+        return true; // Placeholder, will fix in addToCart
+    }
+
     function handleAddToCart(btn) {
-        addToCart(btn.dataset.id, btn.dataset.name, btn.dataset.amount);
+        addToCart(btn.dataset.id, btn.dataset.name, btn.dataset.amount, btn.dataset.type);
     }
 
     function handleRemoveFromCart(btn) {
@@ -559,16 +617,24 @@
         return await res.json();
     }
 
-    async function addToCart(id, name, amount) {
+    async function addToCart(id, name, amount, type) {
         // Basic validation: if Vazhipadu mode, name must be filled before adding items? 
         // Usually better to let them add items first, but name is crucial for the "Entry".
         // Requirement "Enter name & star once" -> implies before Items.
         // I'll relax validation for adding to cart, but enforce for "Add to Batch".
 
         const res = await api('/cashier/billing/cart/update', {
-            action: 'add', id, name, amount
+            action: 'add', id, name, amount, type
         });
         renderCart(res.cart);
+
+        // Auto-scroll to bottom to show the newly added item
+        setTimeout(() => {
+            const container = document.getElementById('cartItems');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }, 50);
     }
 
     async function removeFromCart(id) {
@@ -579,7 +645,7 @@
     }
 
     async function updateDetails() {
-        if (MODE !== 'vazhipadu') return;
+        // if (MODE !== 'vazhipadu') return; // Unified mode needs this
         const name = document.getElementById('devName').value;
         const star = document.getElementById('devStar').value;
         const scheduled_date = document.getElementById('scheduledDate').value;
@@ -600,17 +666,29 @@
         }
     }
 
+    function validateCartForVazhipadu(cartItems) {
+        if (!cartItems || cartItems.length === 0) return { valid: false, msg: "Cart is empty" };
+
+        const hasVazhipadu = cartItems.some(item => item.type === 'puja');
+        if (hasVazhipadu) {
+            const name = document.getElementById('devName').value.trim();
+            const star = document.getElementById('devStar').value.trim();
+            if (!name || !star) return { valid: false, msg: "Devotee Name & Star are REQUIRED for Vazhipadu items." };
+        }
+        return { valid: true };
+    }
+
     async function addToBatch() {
         // Validation
-        const cart = document.getElementById('cartItems').children.length > 0; // rough check (or check model)
-        // Actually we don't have cart object in JS scope fully updated, best to check server or simple DOM check
-        // We can rely on server error.
+        if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
+            alert("Cart is empty.");
+            return;
+        }
 
-        if (MODE === 'vazhipadu') {
-            if (!document.getElementById('devName').value.trim()) {
-                alert("Please enter Devotee Name");
-                return;
-            }
+        const validation = validateCartForVazhipadu(CURRENT_CART.items);
+        if (!validation.valid) {
+            alert(validation.msg);
+            return;
         }
 
         const btn = document.querySelector('button[onclick="addToBatch()"]');
@@ -618,25 +696,15 @@
 
         const res = await api('/cashier/billing/batch/add', {});
         if (res.status === 'success') {
-            // Update Batch Count
             document.getElementById('batchCount').innerText = res.batch_count;
 
-            // Clear Form UI
-            if (MODE === 'vazhipadu') {
-                document.getElementById('devName').value = '';
-                document.getElementById('devStar').value = '';
-                // Keep the date as is, usually user batches for same date? 
-                // Or reset to today? Let's reset to today for safety.
-                document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('devName').focus(); // Ready for next devotee
-            }
+            // Clear Form UI partially (reset name for next person, but keep date?)
+            document.getElementById('devName').value = '';
+            document.getElementById('devStar').value = '';
+            document.getElementById('devName').focus();
 
-            // Cart is already cleared on server, re-render empty
-            // We know its empty
             renderCart({ items: [], total: 0 });
-
-            // Show Print Button in header if > 0
-            location.reload(); // Quickest way to update the batch indicator buttons properly for now without complex DOM logic
+            location.reload();
         } else {
             alert(res.message);
         }
@@ -646,11 +714,23 @@
 
 
     function showPrintDialog() {
-        if (MODE === 'donation') {
-            processBatchPrint();
-        } else {
-            document.getElementById('printDialog').style.display = 'flex';
+        // Show dialog always forunified mode
+        document.getElementById('printDialog').style.display = 'flex';
+    }
+
+    async function processUnifiedPrint() {
+        if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
+            alert("Cart is empty.");
+            return;
         }
+
+        const validation = validateCartForVazhipadu(CURRENT_CART.items);
+        if (!validation.valid) {
+            alert(validation.msg);
+            return;
+        }
+
+        processDirectPrint();
     }
 
     function showBatchModal() {
@@ -758,7 +838,17 @@
     }
 
     async function processDirectPrint() {
-        const btn = document.querySelector('button[onclick="processDirectPrint()"]');
+        // Use a more robust selector or ID if possible, but fallback to searching by text if onclick matches exact string
+        // The error happens because querySelector returns null.
+        // Let's rely on the button passed to processUnifiedPrint? No, that calls this.
+        // Let's add an ID to the print button in the HTML first, but for now, let's select by class and text to be safe, or just try catch.
+        let btn = document.querySelector('button[onclick="processUnifiedPrint()"]');
+        if (!btn) {
+            // Fallback for safety
+            console.warn("Print button not found for loading state update.");
+            btn = { innerText: '', disabled: false }; // Dummy object to prevent crash
+        }
+
         btn.innerText = 'Printing...';
         btn.disabled = true;
 
@@ -999,7 +1089,7 @@
 
     // Autocomplete Logic
     function showStars() {
-        if (MODE !== 'vazhipadu') return;
+        // if (MODE !== 'vazhipadu') return;
         filterStars();
     }
 
@@ -1140,20 +1230,19 @@
     // Initialize
     renderDrafts();
 
-    if (MODE === 'vazhipadu') {
-        const dateInput = document.getElementById('scheduledDate');
-        if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().split('T')[0];
-            updateDetails();
-        }
-
-        // Close results when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.autocomplete-container')) {
-                const res = document.getElementById('starResults');
-                if (res) res.classList.remove('active');
-            }
-        });
+    // if (MODE === 'vazhipadu') { // Always unified now
+    const dateInput = document.getElementById('scheduledDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+        updateDetails();
     }
+
+    // Close results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-container')) {
+            const res = document.getElementById('starResults');
+            if (res) res.classList.remove('active');
+        }
+    });
 </script>
 {% endblock %}

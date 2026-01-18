@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, g, session
 from database import get_db
 from routes.auth import login_required
+from utils.timezone_utils import now_ist, IST, format_ist_datetime, parse_db_timestamp, get_ist_timestamp
 
 cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
 
@@ -159,14 +160,14 @@ def history():
                         except ValueError:
                              # Try with microseconds
                              ts_obj = dt.strptime(raw_ts.split('.')[0], '%Y-%m-%d %H:%M:%S')
-                     
-                     # Convert UTC (DB Default) to System Local Time
-                     local_ts = ts_obj.replace(tzinfo=timezone.utc).astimezone()
-                     b_dict['created_at'] = local_ts.strftime('%d-%m-%Y %I:%M %p')
+                      
+                     # Assume DB timestamp is IST
+                     local_ts = ts_obj.replace(tzinfo=IST)
+                     b_dict['created_at'] = format_ist_datetime(local_ts, '%d-%m-%Y %I:%M %p')
                  elif isinstance(raw_ts, dt):
-                      # If it's already a datetime object, assume it's naive UTC from SQL
-                      local_ts = raw_ts.replace(tzinfo=timezone.utc).astimezone()
-                      b_dict['created_at'] = local_ts.strftime('%d-%m-%Y %I:%M %p')
+                       # If it's already a datetime object, assume it's IST from SQL
+                       local_ts = raw_ts.replace(tzinfo=IST)
+                       b_dict['created_at'] = format_ist_datetime(local_ts, '%d-%m-%Y %I:%M %p')
 
              # Format scheduled_date
              if b_dict.get('scheduled_date'):
@@ -189,14 +190,11 @@ def history():
     
     return render_template('cashier/history.html', bills=bill_list, query=query, date_filter=date_filter)
 
-@cashier_bp.route('/billing/mode/<mode>')
+@cashier_bp.route('/billing/unified')
 @login_required
-def start_billing(mode):
+def start_billing():
     if g.user['role'] != 'cashier':
         return redirect(url_for('admin.index'))
-    
-    if mode not in ['vazhipadu', 'donation']:
-        return redirect(url_for('cashier.index'))
     
     # Initialize connection specific to this request
     db = get_db()
@@ -209,15 +207,28 @@ def start_billing(mode):
     if not active_session:
         return redirect(url_for('cashier.select_printer'))
 
-    # Load Puja/Items based on mode
-    # If mode is vazhipadu, show only 'puja' type, else 'item' type? 
-    # Or show all but filter? Requirements implication: 
-    # Mode 1: Puja (Vazhipadu). Mode 2: Items/Donation.
-    type_filter = 'puja' if mode == 'vazhipadu' else 'item'
-    items = db.execute('SELECT * FROM puja_master WHERE type = ? ORDER BY name', (type_filter,)).fetchall()
+    # Load ALL Puja/Items for unified mode
+    # Order: Pujas first, then Items? Or just alphabetic? 
+    # Let's order by type DESC (puja first), then name
+    items = db.execute('SELECT * FROM puja_master WHERE is_active = 1 ORDER BY type DESC, name').fetchall()
+    
     star_map = {s['eng']: s['mal'] for s in STARS}
-    return render_template('cashier/billing.html', mode=mode, stars=STARS, star_map=star_map, items=items, 
-                           cart=session.get('cart', {'items': [], 'total': 0}), 
+    
+    # Check if cart exists, if not init empty
+    # We don't rely on 'mode' in cart anymore for filtering, but maybe for reporting?
+    # Default mode 'unified'
+    import datetime
+    today = datetime.date.today().isoformat()
+    cart = session.get('cart', {'items': [], 'total': 0})
+    
+    # Ensure scheduled_date is always set to today if empty or missing
+    if not cart.get('scheduled_date'):
+        cart['scheduled_date'] = today
+        session['cart'] = cart
+        session.modified = True
+    
+    return render_template('cashier/billing.html', mode='unified', stars=STARS, star_map=star_map, items=items, 
+                           cart=cart, 
                            batch=session.get('batch', []))
 
 @cashier_bp.route('/billing/cart/update', methods=['POST'])
@@ -230,7 +241,9 @@ def update_cart():
     
     if data['action'] == 'init':
         # Preserve details if changing modes? No, clear mostly.
-        cart = {'mode': data['mode'], 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': ''}
+        import datetime
+        today = datetime.date.today().isoformat()
+        cart = {'mode': data['mode'], 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': today}
         
     elif data['action'] == 'set_details':
         cart['devotee_name'] = data.get('name', '')
@@ -252,7 +265,8 @@ def update_cart():
                 break
         if not found:
             cart['items'].append({
-                'id': item_id, 'name': name, 'amount': amount, 'count': 1, 'total': amount
+                'id': item_id, 'name': name, 'amount': amount, 'count': 1, 'total': amount,
+                'type': data.get('type', 'item') # Default to item if not provided
             })
             
     elif data['action'] == 'remove':
@@ -422,11 +436,12 @@ def checkout():
                 bill_id = draft_id
                 
                 # Update Draft to Printed
+                ist_timestamp = get_ist_timestamp()
                 db.execute(
                     '''UPDATE bills SET 
-                       printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=CURRENT_TIMESTAMP
+                       printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?
                        WHERE id=?''', 
-                    (c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, bill_id)
+                    (c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, ist_timestamp, bill_id)
                 )
                 
                 # Delete old items to overwrite with new cart state (in case edited)
@@ -434,10 +449,11 @@ def checkout():
                 
             else:
                 # Create NEW Bill
+                ist_timestamp = get_ist_timestamp()
                 cur = db.execute(
-                    '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (None, current_seq_counter, g.user['id'], c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, status)
+                    '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (None, current_seq_counter, g.user['id'], c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, status, ist_timestamp)
                 )
                 bill_id = cur.lastrowid
             
@@ -446,8 +462,7 @@ def checkout():
             new_seq = current_seq_counter
             
             # Format Bill No: B-{year}-{seq}
-            import datetime
-            year = datetime.datetime.now().year
+            year = now_ist().year
             bill_no = f"B-{year}-{new_seq}"
             
             # Update Bill with Seq and No
@@ -485,8 +500,7 @@ def checkout():
         
         # Let's implement at least Default (Devotee-wise) which is straightforward.
         
-        import datetime
-        timestamp = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+        timestamp = format_ist_datetime(now_ist(), "%d-%m-%Y %H:%M")
         
         # Fetch Temple Header
         settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
@@ -668,7 +682,12 @@ def checkout():
             from flask import render_template_string
             
             # Ensure template content exists, else fallback? (DB init ensures it, but safe to check)
-            template_content = settings['print_template_content']
+            if settings:
+                settings = dict(settings) # Convert Row to dict to ensure Jinja compatibility
+            else:
+                settings = {}
+
+            template_content = settings.get('print_template_content')
             if not template_content:
                 # Fallback purely for safety if migration failed
                 template_content = "<h1>Error: No Print Template Found. Contact Admin.</h1>"
@@ -719,109 +738,154 @@ def resume_client_draft():
 @cashier_bp.route('/billing/reprint/<int:bill_id>', methods=['POST'])
 @login_required
 def reprint_bill(bill_id):
-    db = get_db()
-    
-    # 1. Fetch Bill
-    bill = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
-    if not bill:
-        return {'status': 'error', 'message': 'Bill not found'}
-        
-    # 2. Fetch Items
-    items = db.execute('''
-        SELECT bi.*, pm.name 
-        FROM bill_items bi 
-        JOIN puja_master pm ON bi.puja_id = pm.id 
-        WHERE bi.bill_id = ?
-    ''', (bill['id'],)).fetchall()
-    
-    # 3. Fetch Settings
-    settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
-    
-    # 4. Prepare Data for Template
-    import datetime
-    from flask import render_template_string
-    
-    # Determine timestamp to show (Original print time or Now? "Reprint" usually implies copy)
-    # Let's show "Reprinted: <Now>" or just original details?
-    # Requirement: "Reprint" usually duplicates original.
-    # But usually receipts show create time. Let's use original create time.
-    timestamp = bill['created_at'] # String from DB
     try:
-         from datetime import datetime as dt, timezone
-         
-         if timestamp:
-             if isinstance(timestamp, str):
-                 try:
-                    ts_obj = dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
-                 except ValueError:
-                    try:
-                        ts_obj = dt.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
-                    except ValueError:
-                         try:
-                             ts_obj = dt.strptime(timestamp.split('.')[0], '%Y-%m-%d %H:%M:%S')
-                         except:
-                             ts_obj = None
-                 
-                 if ts_obj:
-                     # Convert UTC to Local
-                     local_ts = ts_obj.replace(tzinfo=timezone.utc).astimezone()
-                     timestamp = local_ts.strftime('%d-%m-%Y %H:%M')
-             elif isinstance(timestamp, dt):
-                  local_ts = timestamp.replace(tzinfo=timezone.utc).astimezone()
-                  timestamp = local_ts.strftime('%d-%m-%Y %H:%M')
+        db = get_db()
+        data = request.json or {}
+        
+        # Always use browser print for history reprint
+        printer_name = 'WEB_BROWSER_PRINT'
+        
+        # 2. Fetch Bill
+        bill_row = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
+        if not bill_row:
+            return {'status': 'error', 'message': 'Bill not found'}
+        bill = dict(bill_row)
+            
+        # 3. Fetch Items
+        items = db.execute('''
+            SELECT bi.*, pm.name 
+            FROM bill_items bi 
+            JOIN puja_master pm ON bi.puja_id = pm.id 
+            WHERE bi.bill_id = ?
+        ''', (bill['id'],)).fetchall()
+        
+        # 4. Fetch Settings
+        settings_row = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+        if not settings_row:
+             return {'status': 'error', 'message': 'Settings not found'}
+        settings = dict(settings_row)
 
+        
+        # 5. Prepare Data
+        import datetime
+        from flask import render_template_string
+        from datetime import datetime as dt, timezone
+        
+        # Date Formatting Helper
+        def format_ts(ts):
+            if not ts: return ""
+            try:
+                if isinstance(ts, str):
+                    clean_ts = ts.split('.')[0]
+                    if 'T' in clean_ts:
+                         ts_obj = dt.strptime(clean_ts, '%Y-%m-%dT%H:%M:%S')
+                    else:
+                         ts_obj = dt.strptime(clean_ts, '%Y-%m-%d %H:%M:%S')
+                    # Assume IST
+                    local_ts = ts_obj.replace(tzinfo=IST)
+                    return format_ist_datetime(local_ts, '%d-%m-%Y %H:%M')
+            except:
+                return str(ts)
+            return str(ts)
+
+
+        timestamp = format_ts(bill['created_at'])
+        
+        # Scheduled Date Formatting
+        scheduled_date = bill['scheduled_date']
+        s_date_str = None
+        if scheduled_date:
+            try:
+                 if isinstance(scheduled_date, str):
+                     s_date_str = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                 elif hasattr(scheduled_date, 'strftime'):
+                     s_date_str = scheduled_date.strftime('%d-%m-%Y')
+            except:
+                 s_date_str = str(scheduled_date)
+
+        # Star Translation
+        star_map = {s['eng']: s['mal'] for s in STARS}
+        star_disp = star_map.get(bill['star'], bill['star'])
+
+        # Item List for Template/Text
+        line_items = []
+        for item in items:
+            line_items.append({
+                'name': item['name'],
+                'count': item['count'],
+                'total': item['total']
+            })
+
+        # --- BRANCH BASED ON PRINTER TYPE ---
+
+        if printer_name == 'WEB_BROWSER_PRINT':
+            # WEB PRINT
+            slip_data = {
+                'bill_no': bill['bill_no'],
+                'devotee_name': bill['devotee_name'],
+                'star': star_disp,
+                'scheduled_date': s_date_str,
+                'line_items': line_items,
+                'total': bill['total_amount']
+            }
+            
+            template_content = settings['print_template_content']
+            if not template_content:
+                template_content = "<h1>Error: Print Template Missing</h1>"
+                
+            html_content = render_template_string(template_content, 
+                                         slips=[slip_data], 
+                                         settings=settings, 
+                                         timestamp=timestamp)
+                                         
+            return {'status': 'print_web', 'content': html_content}
+
+        else:
+            # PHYSICAL PRINT
+            try:
+                from modules.printers import printer_manager
+                
+                header_txt = f"{settings['name_mal']}\n{settings['name_eng']}\n"
+                footer_txt = f"\n{settings['receipt_footer']}\n"
+                
+                # Construct Slip Text
+                slip = f"{header_txt}\n"
+                slip += f"REPRINT\n"
+                slip += f"Bill: {bill['bill_no']} | {timestamp}\n"
+                
+                if s_date_str:
+                    slip += f"Vazhipadu Date: {s_date_str}\n"
+
+                d_name = bill['devotee_name'] or "N/A"
+                if star_disp != bill['star']: # If translated
+                    slip += f"Name: {d_name}\nStar: {star_disp} ({bill['star']})\n"
+                else:
+                    slip += f"Name: {d_name}  Star: {bill['star']}\n"
+                    
+                slip += "--------------------------------\n"
+                for item in line_items:
+                    slip += f"{item['name']}\n"
+                    # Handle float formatting for count/total if needed
+                    qty = item['count']
+                    amt = item['total']
+                    slip += f"Qty: {qty}  Amt: {amt:.2f}\n"
+                slip += "--------------------------------\n"
+                slip += f"Total: {bill['total_amount']:.2f}\n"
+                slip += f"{footer_txt}"
+                
+                # Cut Command
+                slip += "\n\n\n\x1dV\x00"
+                
+                printer_manager.print_text(printer_name, slip)
+                
+                return {'status': 'success', 'message': f'Reprint sent to {printer_name}'}
+                
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return {'status': 'error', 'message': f'Printer Error: {str(e)}'}
+        
     except Exception as e:
-         print(f"Reprint Date Error: {e}")
-         pass # Keep original if parse fails
-    
-    # Convert DB Items to Dict list matching template expectation
-    line_items = []
-    for item in items:
-        # DB columns: count, total, price_snapshot... template needs: name, count, total
-        line_items.append({
-            'name': item['name'],
-            'count': item['count'],
-            'total': item['total']
-        })
-        
-    # Star Translation
-    star_map = {s['eng']: s['mal'] for s in STARS}
-    star_disp = star_map.get(bill['star'], bill['star'])
-    
-    # Format Scheduled Date
-    scheduled_date = bill['scheduled_date']
-    s_date_str = None
-    if scheduled_date:
-        try:
-             from datetime import datetime as dt
-             if isinstance(scheduled_date, str):
-                 try:
-                    s_date_str = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
-                 except:
-                    s_date_str = scheduled_date
-             elif hasattr(scheduled_date, 'strftime'):
-                 s_date_str = scheduled_date.strftime('%d-%m-%Y')
-        except:
-             s_date_str = str(scheduled_date)
-
-    slip_data = {
-        'bill_no': bill['bill_no'],
-        'devotee_name': bill['devotee_name'],
-        'star': star_disp,
-        'scheduled_date': s_date_str,
-        'line_items': line_items,
-        'total': bill['total_amount']
-    }
-    
-    # 5. Render
-    template_content = settings['print_template_content']
-    if not template_content:
-        template_content = "<h1>Error: Print Template Missing</h1>"
-        
-    # Note: Template expects 'slips' as a LIST of slips
-    html_content = render_template_string(template_content, 
-                                 slips=[slip_data], 
-                                 settings=settings, 
-                                 timestamp=timestamp)
-                                 
-    return {'status': 'print_web', 'content': html_content}
+        import traceback
+        traceback.print_exc()
+        return {'status': 'error', 'message': str(e)}
