@@ -111,13 +111,13 @@
                     <div class="cart-item-title">{{ item.name }}</div>
                     <div class="cart-item-details">
                         <div class="qty-control">
-                            <button onclick="changeQuantity('{{ item.id }}', {{ item.count }}, -1)"
+                            <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', -1)"
                                 class="btn-qty minus" title="Decrease">
                                 −
                             </button>
                             <span class="qty-display">{{ item.count }}</span>
-                            <button onclick="changeQuantity('{{ item.id }}', {{ item.count }}, 1)" class="btn-qty plus"
-                                title="Increase">
+                            <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', 1)"
+                                class="btn-qty plus" title="Increase">
                                 +
                             </button>
                         </div>
@@ -485,8 +485,11 @@
 {% endblock %}
 
 {% block scripts %}
+<script id="data-stars" type="application/json">{{ stars | tojson | safe }}</script>
+<script id="data-cart" type="application/json">{{ cart | tojson | safe }}</script>
+
 <script>
-    const ALL_STARS = {{ stars | tojson | safe }};
+    const ALL_STARS = JSON.parse(document.getElementById('data-stars').textContent);
     const MODE = '{{ mode }}';
     let lastPrintContent = ""; // For Reprint Logic
 
@@ -815,7 +818,7 @@
     }
 
     const DRAFTS_KEY = 'devalaya_billing_sessions';
-    let CURRENT_CART = {{ cart | tojson | safe }};
+    let CURRENT_CART = JSON.parse(document.getElementById('data-cart').textContent);
 
     function renderDrafts() {
         const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');

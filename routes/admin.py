@@ -89,6 +89,7 @@ def index():
         hours_counts.append(hours_map.get(h, 0))
 
     return render_template('admin/dashboard.html',
+                           now=datetime.datetime.now().strftime("%d-%m-%Y %I:%M %p"),
                            today_total=today_total,
                            month_total=month_total,
                            trend_dates=trend_dates,
