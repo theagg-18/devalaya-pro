@@ -151,16 +151,25 @@
     }
 </style>
 
+<!-- Dashboard Scripts -->
+<!-- Data passed from Flask -->
+<script id="data-trend-dates" type="application/json">{{ trend_dates| tojson}}</script>
+<script id="data-trend-revenues" type="application/json">{{ trend_revenues|tojson }}</script>
+<script id="data-item-names" type="application/json">{{ top_item_names|tojson }}</script>
+<script id="data-item-counts" type="application/json">{{ top_item_counts|tojson }}</script>
+<script id="data-hours-labels" type="application/json">{{ hours_labels|tojson }}</script>
+<script id="data-hours-counts" type="application/json">{{ hours_counts|tojson }}</script>
+
 <script>
-    // Data passed from Flask
-    const trendDates = {{ trend_dates| tojson }};
-    const trendRevenues = {{ trend_revenues| tojson }};
+    // Parse Data from Script Tags
+    const trendDates = JSON.parse(document.getElementById('data-trend-dates').textContent);
+    const trendRevenues = JSON.parse(document.getElementById('data-trend-revenues').textContent);
 
-    const itemNames = {{ top_item_names| tojson }};
-    const itemCounts = {{ top_item_counts| tojson }};
+    const itemNames = JSON.parse(document.getElementById('data-item-names').textContent);
+    const itemCounts = JSON.parse(document.getElementById('data-item-counts').textContent);
 
-    const hoursLabels = {{ hours_labels| tojson }};
-    const hoursCounts = {{ hours_counts| tojson }};
+    const hoursLabels = JSON.parse(document.getElementById('data-hours-labels').textContent);
+    const hoursCounts = JSON.parse(document.getElementById('data-hours-counts').textContent);
 
     // 1. Revenue Chart
     const ctxRevenue = document.getElementById('revenueChart').getContext('2d');

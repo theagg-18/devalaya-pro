@@ -215,7 +215,8 @@ def start_billing(mode):
     # Mode 1: Puja (Vazhipadu). Mode 2: Items/Donation.
     type_filter = 'puja' if mode == 'vazhipadu' else 'item'
     items = db.execute('SELECT * FROM puja_master WHERE type = ? ORDER BY name', (type_filter,)).fetchall()
-    return render_template('cashier/billing.html', mode=mode, stars=STARS, items=items, 
+    star_map = {s['eng']: s['mal'] for s in STARS}
+    return render_template('cashier/billing.html', mode=mode, stars=STARS, star_map=star_map, items=items, 
                            cart=session.get('cart', {'items': [], 'total': 0}), 
                            batch=session.get('batch', []))
 
