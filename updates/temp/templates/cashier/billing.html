@@ -1105,17 +1105,36 @@
             s.mal.includes(query)
         );
 
+        // Clear previous results
+        results.innerHTML = '';
+
         if (filtered.length === 0) {
-            results.innerHTML = '<div class="autocomplete-item text-muted">No results found</div>';
+            const noResultDiv = document.createElement('div');
+            noResultDiv.className = 'autocomplete-item text-muted';
+            noResultDiv.textContent = 'No results found';
+            results.appendChild(noResultDiv);
             return;
         }
 
-        results.innerHTML = filtered.map(s => `
-            <div class="autocomplete-item" onclick="selectStar('${s.mal}')">
-                <span>${s.mal}</span>
-                <span class="eng-hint">${s.eng}</span>
-            </div>
-        `).join('');
+        filtered.forEach(s => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'autocomplete-item';
+            itemDiv.onclick = function () {
+                selectStar(s.mal);
+            };
+
+            const malSpan = document.createElement('span');
+            malSpan.textContent = s.mal;
+
+            const engSpan = document.createElement('span');
+            engSpan.className = 'eng-hint';
+            engSpan.textContent = s.eng;
+
+            itemDiv.appendChild(malSpan);
+            itemDiv.appendChild(engSpan);
+
+            results.appendChild(itemDiv);
+        });
     }
 
     function selectStar(val) {
