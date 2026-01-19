@@ -11,6 +11,25 @@ import os
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Configure Logging
+import logging
+from logging.handlers import RotatingFileHandler
+
+if not app.debug:
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    file_handler = RotatingFileHandler('logs/error.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+    file_handler.setLevel(logging.ERROR)
+    app.logger.addHandler(file_handler)
+
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Devalaya Billing System startup')
+else:
+    logging.basicConfig(level=logging.INFO)
+
+
 app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(cashier_bp)
@@ -95,8 +114,9 @@ def inject_settings():
                     
                 theme_css = get_theme_css(theme_name, custom_colors)
             except Exception as e:
-                print(f"ERROR generating theme CSS: {e}")
-                traceback.print_exc()
+                import logging
+                logging.error(f"ERROR generating theme CSS: {e}")
+                # traceback.print_exc() # Logging handles this if we want, or remove
                 theme_css = get_theme_css('kerala')  # Fallback to default
             
             return {
@@ -109,8 +129,9 @@ def inject_settings():
                 'theme_css': theme_css
             }
         except Exception as e:
-            print(f"ERROR in context processor: {e}")
-            traceback.print_exc()
+            import logging
+            logging.error(f"ERROR in context processor: {e}")
+            # traceback.print_exc()
             return {
                 'temple_settings': None,
                 'now_year': datetime.datetime.now().year,

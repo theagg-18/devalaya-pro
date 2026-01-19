@@ -184,7 +184,9 @@ def users():
                 db.commit()
                 flash('User added successfully', 'success')
             except Exception as e:
-                flash(f'Error adding user: {e}', 'error')
+                import logging
+                logging.error(f"Error adding user: {e}", exc_info=True)
+                flash('An error occurred while adding the user.', 'error')
         elif 'delete_user' in request.form:
             user_id = int(request.form['user_id'])
             
@@ -202,7 +204,9 @@ def users():
                     db.commit()
                     flash('User has billing history and cannot be deleted. Account deactivated instead.', 'warning')
                 except Exception as e:
-                    flash(f'Error deleting user: {e}', 'error')
+                    import logging
+                    logging.error(f"Error deleting user: {e}", exc_info=True)
+                    flash('An error occurred while deleting the user.', 'error')
             
         elif 'change_pin' in request.form:
             user_id = request.form['user_id']
@@ -212,7 +216,9 @@ def users():
                 db.commit()
                 flash('PIN/Password updated successfully', 'success')
             except Exception as e:
-                flash(f'Error updating PIN: {e}', 'error')
+                import logging
+                logging.error(f"Error updating PIN: {e}", exc_info=True)
+                flash('An error occurred while updating the PIN.', 'error')
 
         elif 'toggle_active' in request.form:
             user_id = request.form['user_id']
@@ -239,7 +245,9 @@ def printers():
                 db.commit()
                 flash('Browser Virtual Printer added successfully', 'success')
              except Exception as e:
-                flash(f'Error adding browser printer: {e}', 'error')
+                import logging
+                logging.error(f"Error adding browser printer: {e}", exc_info=True)
+                flash('An error occurred while adding the browser printer.', 'error')
                 
         elif 'add_printer' in request.form:
             cups_name = request.form['cups_name']
@@ -250,7 +258,9 @@ def printers():
                 db.commit()
                 flash('Printer added successfully', 'success')
             except Exception as e:
-                flash(f'Error adding printer: {e}', 'error')
+                import logging
+                logging.error(f"Error adding printer: {e}", exc_info=True)
+                flash('An error occurred while adding the printer.', 'error')
         
         elif 'toggle_active' in request.form:
             printer_id = request.form['printer_id']
@@ -270,7 +280,9 @@ def printers():
                 db.commit()
                 flash('Printer is in use, so it was disabled instead of deleted.', 'warning')
             except Exception as e:
-                flash(f'Error removing printer: {e}', 'error')
+                import logging
+                logging.error(f"Error removing printer: {e}", exc_info=True)
+                flash('An error occurred while removing the printer.', 'error')
 
     # Get registered printers from DB
     registered_printers = db.execute('SELECT * FROM printers').fetchall()
@@ -301,7 +313,9 @@ def items():
                 db.commit()
                 flash('Item added successfully', 'success')
             except Exception as e:
-                flash(f'Error adding item: {e}', 'error')
+                import logging
+                logging.error(f"Error adding item: {e}", exc_info=True)
+                flash('An error occurred while adding the item.', 'error')
         
         elif 'delete_item' in request.form:
             item_id = request.form['item_id']
@@ -316,7 +330,9 @@ def items():
                 db.commit()
                 flash('Item archived because it has billing history (Soft Deleted)', 'warning')
             except Exception as e:
-                flash(f'Error deleting item: {e}', 'error')
+                import logging
+                logging.error(f"Error deleting item: {e}", exc_info=True)
+                flash('An error occurred while deleting the item.', 'error')
 
         elif 'edit_item' in request.form:
             item_id = request.form['item_id']
@@ -329,7 +345,9 @@ def items():
                 db.commit()
                 flash('Item updated successfully', 'success')
             except Exception as e:
-                flash(f'Error updating item: {e}', 'error')
+                import logging
+                logging.error(f"Error updating item: {e}", exc_info=True)
+                flash('An error occurred while updating the item.', 'error')
 
         elif 'upload_csv' in request.files:
             file = request.files['upload_csv']
@@ -627,7 +645,9 @@ def trigger_backup():
         flash(f'Backup created successfully: {backup_filename}', 'success')
         
     except Exception as e:
-        flash(f'Backup failed: {e}', 'error')
+        import logging
+        logging.error(f"Backup failed: {e}", exc_info=True)
+        flash('Backup failed. Check logs for details.', 'error')
         
     # Redirect back to where we came from if possible, or support both settings and backups page
     # simpliest is just go to backups page now
@@ -664,7 +684,9 @@ def delete_backup(filename):
         else:
             flash('File not found', 'error')
     except Exception as e:
-        flash(f'Error deleting file: {e}', 'error')
+        import logging
+        logging.error(f"Error deleting file: {e}", exc_info=True)
+        flash('An error occurred while deleting the file.', 'error')
         
     return redirect(url_for('admin.backups'))
 
@@ -702,7 +724,9 @@ def restore_backup(filename):
         flash(f'Database restored successfully from {safe_filename}.', 'success')
         
     except Exception as e:
-        flash(f'Restore failed: {e}', 'error')
+        import logging
+        logging.error(f"Restore failed: {e}", exc_info=True)
+        flash('Database restore failed. Check logs for details.', 'error')
         
     return redirect(url_for('admin.backups'))
 
@@ -763,7 +787,9 @@ def reset_database():
         bck.close()
         
     except Exception as e:
-        flash(f'Reset cancelled: Critical backup failed ({e})', 'error')
+        import logging
+        logging.error(f"Reset cancelled: Critical backup failed ({e})", exc_info=True)
+        flash('Reset cancelled due to backup failure.', 'error')
         return redirect(url_for('admin.backups'))
         
     # 2. Drop all tables
@@ -786,7 +812,9 @@ def reset_database():
         flash(f'Database has been reset to factory settings. A backup was saved as {backup_filename}.', 'success')
         
     except Exception as e:
-        flash(f'Reset failed: {e}', 'error')
+        import logging
+        logging.error(f"Reset failed: {e}", exc_info=True)
+        flash('Database reset failed. Check logs.', 'error')
         
     return redirect(url_for('admin.backups'))
 
@@ -860,7 +888,9 @@ def check_updates():
         return {'available': False, 'error': f"No releases found (GitHub {resp.status_code})"}
             
     except Exception as e:
-        return {'available': False, 'error': str(e)}
+        import logging
+        logging.error(f"Check updates failed: {e}", exc_info=True)
+        return {'available': False, 'error': 'Failed to check for updates.'}
 
 @admin_bp.route('/updates/install', methods=['POST'])
 def install_update():
