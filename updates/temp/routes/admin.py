@@ -526,8 +526,9 @@ def trigger_backup():
 def download_backup(filename):
     from config import Config
     import os
+    from werkzeug.utils import secure_filename
     
-    safe_filename = os.path.basename(filename)
+    safe_filename = secure_filename(filename)
     file_path = os.path.join(Config.BACKUP_PATH, safe_filename)
     
     if not os.path.exists(file_path):
@@ -540,8 +541,9 @@ def download_backup(filename):
 def delete_backup(filename):
     from config import Config
     import os
+    from werkzeug.utils import secure_filename
     
-    safe_filename = os.path.basename(filename)
+    safe_filename = secure_filename(filename)
     file_path = os.path.join(Config.BACKUP_PATH, safe_filename)
     
     try:
@@ -560,8 +562,9 @@ def restore_backup(filename):
     from config import Config
     import os
     import sqlite3
+    from werkzeug.utils import secure_filename
     
-    safe_filename = os.path.basename(filename)
+    safe_filename = secure_filename(filename)
     backup_path = os.path.join(Config.BACKUP_PATH, safe_filename)
     
     if not os.path.exists(backup_path):
@@ -691,6 +694,19 @@ def updates():
 
 @admin_bp.route('/updates/check')
 def check_updates():
+    from version import get_version
+    current_ver = get_version().lstrip('v')
+    
+    def parse_version(v_str):
+        # Handle v1.2.0 -> [1, 2, 0]
+        v_str = v_str.lstrip('v')
+        return [int(x) for x in v_str.split('.') if x.isdigit()]
+
+    def is_newer(remote, current):
+        r = parse_version(remote)
+        c = parse_version(current)
+        return r > c
+
     # Helper to check github releases
     try:
         import requests
@@ -699,30 +715,39 @@ def check_updates():
         
         # 1. Try Releases
         resp = requests.get(repo_api, timeout=5)
+        latest_version = None
+        download_url = None
+        
         if resp.status_code == 200:
             data = resp.json()
-            return {
-                'available': True,
-                'version': data.get('tag_name', 'Unknown'),
-                'url': data.get('zipball_url', '')
-            }
+            latest_version = data.get('tag_name', 'Unknown')
+            download_url = data.get('zipball_url', '')
             
         # 2. Fallback to Tags (if 404 on releases)
-        if resp.status_code == 404:
+        elif resp.status_code == 404:
             resp_tags = requests.get(tags_api, timeout=5)
             if resp_tags.status_code == 200:
                 tags = resp_tags.json()
                 if tags:
                     latest_tag = tags[0] # First is usually latest
-                    return {
-                        'available': True,
-                        'version': latest_tag.get('name', 'Unknown'),
-                        'url': latest_tag.get('zipball_url', ''),
-                        'note': 'Latests Tag (No Release)'
-                    }
-            return {'available': False, 'error': "No releases or tags found on GitHub."}
+                    latest_version = latest_tag.get('name', 'Unknown')
+                    download_url = latest_tag.get('zipball_url', '')
+
+        if latest_version:
+             if is_newer(latest_version, current_ver):
+                return {
+                    'available': True,
+                    'version': latest_version,
+                    'url': download_url
+                }
+             else:
+                return {
+                    'available': False, 
+                    'error': f"You are up to date (Latest: {latest_version})"
+                }
+
+        return {'available': False, 'error': f"No releases found (GitHub {resp.status_code})"}
             
-        return {'available': False, 'error': f"GitHub API Error: {resp.status_code}"}
     except Exception as e:
         return {'available': False, 'error': str(e)}
 
