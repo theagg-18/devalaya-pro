@@ -331,52 +331,157 @@ def items():
             except Exception as e:
                 flash(f'Error updating item: {e}', 'error')
 
+        elif 'upload_csv' in request.files:
+            file = request.files['upload_csv']
+            if file and (file.filename.endswith('.csv') or file.filename.endswith('.txt')):
+                try:
+                    import csv
+                    import io
+                    # Read file content safely
+                    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+                    csv_input = csv.DictReader(stream)
+                    
+                    # Normalize headers to support case-insensitive upload
+                    headers = [h.lower().strip() for h in csv_input.fieldnames or []]
+                    
+                    if 'name' not in headers or 'amount' not in headers:
+                         flash('Invalid CSV format. Header must contain "Name" and "Amount".', 'error')
+                    else:
+                        success_count = 0
+                        updated_count = 0
+                        
+                        # Prepare mapped reader
+                        stream.seek(0)
+                        csv_input = csv.DictReader(stream)
+                        # We need to map actual optional headers dynamically if they differ in case
+                        # But for simplicity, let's strictly require 'Name', 'Amount', 'Type' (optional)
+                        # Or better, just case-insensitive lookup per row.
+                        
+                        for row in csv_input:
+                            # Normalize keys
+                            row_norm = {k.lower().strip(): v for k, v in row.items() if k}
+                            
+                            name = row_norm.get('name')
+                            amount_str = row_norm.get('amount')
+                            type_ = row_norm.get('type', 'puja')
+                            
+                            if not name or not amount_str:
+                                continue # Skip invalid rows
+                                
+                            try:
+                                amount = float(amount_str)
+                            except ValueError:
+                                continue # Skip invalid amount
+                                
+                            # Check existence
+                            exist = db.execute('SELECT id FROM puja_master WHERE name = ?', (name,)).fetchone()
+                            
+                            if exist:
+                                db.execute('UPDATE puja_master SET amount=?, type=?, is_active=1 WHERE id=?', 
+                                           (amount, type_, exist['id']))
+                                updated_count += 1
+                            else:
+                                db.execute('INSERT INTO puja_master (name, amount, type) VALUES (?, ?, ?)',
+                                           (name, amount, type_))
+                                success_count += 1
+                                
+                        db.commit()
+                        flash(f'Bulk upload complete. Created: {success_count}, Updated: {updated_count}.', 'success')
+                        
+                except Exception as e:
+                    flash(f'Error processing CSV: {e}', 'error')
+            else:
+                flash('Invalid file. Please upload a CSV file.', 'error')
+
     items = db.execute('SELECT * FROM puja_master WHERE is_active = 1 ORDER BY name').fetchall()
     return render_template('admin/items.html', items=items)
+
+@admin_bp.route('/items/template')
+def items_template():
+    import io
+    import csv
+    from flask import Response
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Amount', 'Type'])
+    writer.writerow(['Ganapathi Homam', '100', 'puja'])
+    writer.writerow(['Ghee (100ml)', '50', 'item'])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=item_template.csv"}
+    )
 
 @admin_bp.route('/reports')
 def reports():
     db = get_db()
     
     # Filter params
-    date_filter = request.args.get('date', None)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
     search_query = request.args.get('q', '')
     
-    query = '''
+    # Defaults
+    import datetime
+    today = datetime.date.today().isoformat()
+    if not start_date: start_date = today
+    if not end_date: end_date = today
+
+    # Base Conditions
+    conditions = ['date(b.created_at) BETWEEN ? AND ?']
+    params = [start_date, end_date]
+    
+    # Search Logic
+    if search_query:
+        # Search Bill No, Devotee, OR Item Name (Subquery)
+        conditions.append('''
+            (b.bill_no LIKE ? OR b.devotee_name LIKE ? OR EXISTS (
+                SELECT 1 FROM bill_items bi 
+                JOIN puja_master pm ON bi.puja_id = pm.id 
+                WHERE bi.bill_id = b.id AND pm.name LIKE ?
+            ))
+        ''')
+        wildcard = f'%{search_query}%'
+        params.extend([wildcard, wildcard, wildcard])
+        
+    where_clause = ' AND '.join(conditions)
+    
+    # 1. Calculate Global Totals (Revenue & Count) for the filtered set
+    grand_total_sql = f'''
+        SELECT COUNT(*), SUM(b.total_amount)
+        FROM bills b
+        WHERE {where_clause}
+    '''
+    stats = db.execute(grand_total_sql, params).fetchone()
+    total_records = stats[0] or 0
+    total_revenue = stats[1] or 0.0
+
+    # 2. Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    total_pages = (total_records + per_page - 1) // per_page
+    offset = (page - 1) * per_page
+    
+    # 3. Fetch Paginated Records
+    data_sql = f'''
         SELECT 
             b.*,
             u.username as cashier_name
         FROM bills b
         JOIN users u ON b.cashier_id = u.id
-        WHERE 1=1
+        WHERE {where_clause}
+        ORDER BY b.created_at DESC
+        LIMIT ? OFFSET ?
     '''
-    params = []
+    # We need a fresh params list for the data query because we append limit/offset
+    data_params = list(params) 
+    data_params.extend([per_page, offset])
     
-    # If searching, ignore date filter completely (Global Search)
-    if search_query:
-        query += ' AND (b.bill_no LIKE ? OR b.devotee_name LIKE ?)'
-        wildcard = f'%{search_query}%'
-        params.extend([wildcard, wildcard])
-        
-        # Explicitly clear date filter so UI shows we searched everywhere
-        date_filter = ''
-    else:
-        if date_filter:
-            query += ' AND date(b.created_at) = ?'
-            params.append(date_filter)
-        else:
-            # Default to today
-            import datetime
-            today = datetime.date.today().isoformat()
-            query += ' AND date(b.created_at) = ?'
-            params.append(today)
-            date_filter = today
-        
-    query += ' ORDER BY b.created_at DESC LIMIT 100'
+    bills = db.execute(data_sql, data_params).fetchall()
     
-    bills = db.execute(query, params).fetchall()
-    
-    # Fetch items for each bill for full transparency
+    # Fetch items for display
     bill_list = []
     for bill in bills:
         b_dict = dict(bill)
@@ -388,28 +493,33 @@ def reports():
         ''', (bill['id'],)).fetchall()
         bill_list.append(b_dict)
     
-    # Calculate totals
-    total_amount = sum(b['total_amount'] for b in bill_list)
-    count = len(bill_list)
-    
     return render_template('admin/reports.html', 
                            bills=bill_list, 
-                           total_amount=total_amount, 
-                           count=count, 
-                           date_filter=date_filter,
-                           search_query=search_query)
+                           total_amount=total_revenue, 
+                           count=total_records, 
+                           start_date=start_date,
+                           end_date=end_date,
+                           search_query=search_query,
+                           current_page=page,
+                           total_pages=total_pages)
 
 @admin_bp.route('/reports/export')
 def export_reports():
     import csv
     import io
     from flask import Response, stream_with_context
+    import datetime
     
     db = get_db()
-    date_filter = request.args.get('date')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    # Defaults to today if missing
+    today = datetime.date.today().isoformat()
+    if not start_date: start_date = today
+    if not end_date: end_date = today
     
-    # Export full dump for the day with Items
-    # utilizing GROUP_CONCAT to list items in the same row
+    # Export full dump for the date range with Items
     cursor = db.execute('''
         SELECT 
             b.bill_no, 
@@ -423,10 +533,10 @@ def export_reports():
         JOIN users u ON b.cashier_id = u.id
         LEFT JOIN bill_items bi ON b.id = bi.bill_id
         LEFT JOIN puja_master pm ON bi.puja_id = pm.id
-        WHERE date(b.created_at) = ?
+        WHERE date(b.created_at) BETWEEN ? AND ?
         GROUP BY b.id
         ORDER BY b.created_at DESC
-    ''', (date_filter,))
+    ''', (start_date, end_date))
     
     # Use distinct BOM for Excel to recognize UTF-8
     def generate():
@@ -453,10 +563,11 @@ def export_reports():
             output.seek(0)
             output.truncate(0)
 
+    filename = f"report_{start_date}.csv" if start_date == end_date else f"report_{start_date}_to_{end_date}.csv"
     return Response(
         stream_with_context(generate()),
         mimetype="text/csv",
-        headers={"Content-disposition": f"attachment; filename=report_{date_filter}.csv"}
+        headers={"Content-disposition": f"attachment; filename={filename}"}
     )
 
 @admin_bp.route('/backups')

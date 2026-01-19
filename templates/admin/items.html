@@ -28,7 +28,42 @@
         </form>
     </div>
 
-    <h3>Master List</h3>
+    <!-- Bulk Actions -->
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #475569;">Bulk Import</h3>
+        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1rem;">Upload a CSV file with "Name", "Amount", and
+            optionally "Type" columns. Existing items with the same name will be updated.</p>
+
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+            <!-- Download Template -->
+            <div>
+                <a href="{{ url_for('admin.items_template') }}" class="btn btn-secondary"
+                    style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download CSV Template
+                </a>
+            </div>
+
+            <!-- Upload Form -->
+            <form method="post" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="file" name="upload_csv" accept=".csv, .txt" required
+                    style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;">
+                <button type="submit" class="btn btn-primary"
+                    style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Upload CSV
+                </button>
+            </form>
+        </div>
+    </div>
     <table style="width: 100%; border-collapse: collapse;">
         <thead>
             <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">

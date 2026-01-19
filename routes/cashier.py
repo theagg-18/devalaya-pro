@@ -125,7 +125,20 @@ def history():
             params.append(today)
             date_filter = today
 
-    sql += ' ORDER BY created_at DESC LIMIT 50'
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+    
+    # 1. Get Total Count
+    count_sql = f"SELECT COUNT(*) FROM ({sql})"
+    total_records = db.execute(count_sql, params).fetchone()[0]
+    total_pages = (total_records + per_page - 1) // per_page
+    
+    # 2. Get Paginated Records
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    params.extend([per_page, offset])
     
     bills = db.execute(sql, params).fetchall()
     
@@ -188,7 +201,8 @@ def history():
             
         bill_list.append(b_dict)
     
-    return render_template('cashier/history.html', bills=bill_list, query=query, date_filter=date_filter)
+    return render_template('cashier/history.html', bills=bill_list, query=query, date_filter=date_filter,
+                           current_page=page, total_pages=total_pages)
 
 @cashier_bp.route('/billing/unified')
 @login_required
@@ -412,13 +426,6 @@ def checkout():
         full_print_content = ""
         bill_ids = []
 
-        # 1. Get Initial Sequence (Start from Max)
-        last_seq = db.execute('SELECT MAX(bill_seq) FROM bills').fetchone()[0]
-        if last_seq is None:
-            last_seq = 0
-            
-        current_seq_counter = last_seq
-
         # Process each "Cart" in the batch
         for bill_data in items_to_process:
              # Create Bill
@@ -426,57 +433,100 @@ def checkout():
             star = bill_data.get('star')
             b_type = bill_data.get('mode', 'vazhipadu')
             draft_id = bill_data.get('draft_id')
-            
-            # Insert with Status
-            status = 'printed' 
             scheduled_date = bill_data.get('scheduled_date')
+            total_amount = bill_data['total']
             
-            if draft_id:
-                # REUSE existing Draft
-                bill_id = draft_id
-                
-                # Update Draft to Printed
-                ist_timestamp = get_ist_timestamp()
-                db.execute(
-                    '''UPDATE bills SET 
-                       printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?
-                       WHERE id=?''', 
-                    (c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, ist_timestamp, bill_id)
-                )
-                
-                # Delete old items to overwrite with new cart state (in case edited)
-                db.execute('DELETE FROM bill_items WHERE bill_id=?', (bill_id,))
-                
-            else:
-                # Create NEW Bill
-                ist_timestamp = get_ist_timestamp()
-                cur = db.execute(
-                    '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (None, current_seq_counter, g.user['id'], c_session['printer_id'], bill_data['total'], name, star, scheduled_date, b_type, status, ist_timestamp)
-                )
-                bill_id = cur.lastrowid
-            
-            # GENERATE SEQUENTIAL BILL NUMBER
-            current_seq_counter += 1
-            new_seq = current_seq_counter
-            
-            # Format Bill No: B-{year}-{seq}
-            year = now_ist().year
-            bill_no = f"B-{year}-{new_seq}"
-            
-            # Update Bill with Seq and No
-            db.execute('UPDATE bills SET bill_seq = ?, bill_no = ? WHERE id = ?', (new_seq, bill_no, bill_id))
-            
-            bill_ids.append(bill_no) # Store formatted Bill No string for printing
-            
-            # Add Items
-            for item in bill_data['items']:
-                db.execute(
-                    '''INSERT INTO bill_items (bill_id, puja_id, price_snapshot, count, total)
-                       VALUES (?, ?, ?, ?, ?)''',
-                    (bill_id, item['id'], item['amount'], item['count'], item['total'])
-                )
+            # RETRY LOOP for Safe Concurrent Numbering
+            # We try up to 5 times to get a unique slot
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    # 1. Get Latest Sequence (Inside loop to be fresh)
+                    # We start a fresh transaction for this check implicitly if previous committed, 
+                    # but strictly, 'execute' sees current DB state.
+                    last_seq_row = db.execute('SELECT MAX(bill_seq) FROM bills').fetchone()
+                    current_seq = last_seq_row[0] if last_seq_row and last_seq_row[0] is not None else 0
+                    new_seq = current_seq + 1
+                    
+                    # Format Bill No: B-{year}-{seq}
+                    year = now_ist().year
+                    bill_no = f"B-{year}-{new_seq}"
+                    
+                    # 2. Insert/Update with this Bill No
+                    # This will fail with IntegrityError if someone else grabbed it 
+                    # between the SELECT and INSERT/UPDATE.
+                    
+                    status = 'printed' 
+                    ist_timestamp = get_ist_timestamp()
+
+                    if draft_id:
+                        # REUSE existing Draft - Update it
+                        # Optimistically try to set the new bill_no
+                        db.execute(
+                            '''UPDATE bills SET 
+                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?
+                               WHERE id=?''', 
+                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, draft_id)
+                        )
+                        bill_id = draft_id
+                        
+                        # Verify Update Count - if 0 that means draft gone, fallback to insert? 
+                        # Or more likely, if Constraint failed, it raises IntegrityError
+                        
+                        # Delete old items to overwrite
+                        db.execute('DELETE FROM bill_items WHERE bill_id=?', (bill_id,))
+                        
+                    else:
+                        # Create NEW Bill
+                        # We include bill_no here to trigger UNIQUE constraint immediately
+                        cur = db.execute(
+                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp)
+                        )
+                        bill_id = cur.lastrowid
+                    
+                    # If we reached here, success! We own this number.
+                    bill_ids.append(bill_no) 
+                    
+                    # Add Items
+                    for item in bill_data['items']:
+                        db.execute(
+                            '''INSERT INTO bill_items (bill_id, puja_id, price_snapshot, count, total)
+                               VALUES (?, ?, ?, ?, ?)''',
+                            (bill_id, item['id'], item['amount'], item['count'], item['total'])
+                        )
+                    
+                    # Commit this bill immediately to lock the sequence for others?
+                    # Or keep open transaction? 
+                    # Keeping it open holds the lock if we are in WAL mode effectively, 
+                    # but committing is safer to "publish" the used number.
+                    # Given we have a batch, we can commit per bill to be safe, 
+                    # or commit all at end. 
+                    # If we commit at end, the "SELECT MAX" by other threads might not see our uncommitted changes 
+                    # unless we are using specific isolation levels.
+                    # Best practice for this "Gapless Sequence" in high concurrency:
+                    # Commit often or use explicit locking.
+                    # Let's rely on the UNIQUE constraint catching the collision.
+                    
+                    break # Break retry loop
+                    
+                except sqlite3.IntegrityError:
+                    # Collision detected! (bill_no already exists)
+                    if attempt == max_retries - 1:
+                        raise Exception("System busy. Could not generate bill number. Please try again.")
+                    else:
+                        # Wait a tiny bit (random ms) to desynchronize threads
+                        import time, random
+                        time.sleep(random.uniform(0.01, 0.05))
+                        continue
+                        
+        # Commit at the very end of the batch (or earlier if we chose per-bill)
+        # We'll stick to function-end commit, but note that this means 
+        # "SELECT MAX" from others might return the OLD max until we commit.
+        # However, their INSERT will fail because of our uncommitted write locking the row/index (in WAL) 
+        # or the UNIQUE index check. Correct.
+
         
         # GENERATE PRINT CONTENT
         # Logic: 

@@ -115,6 +115,30 @@
     </div>
 </div>
 
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+    {% if current_page > 1 %}
+    <a href="{{ url_for('cashier.history', page=current_page-1, q=query, date=date_filter) }}" class="btn btn-secondary"
+        style="padding: 0.5rem 1rem;">
+        &laquo; Previous
+    </a>
+    {% endif %}
+
+    <span style="color: var(--text-muted); font-size: 0.9rem;">
+        Page <strong>{{ current_page }}</strong> of {{ total_pages }}
+    </span>
+
+    {% if current_page < total_pages %} <a
+        href="{{ url_for('cashier.history', page=current_page+1, q=query, date=date_filter) }}"
+        class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+        Next &raquo;
+        </a>
+        {% endif %}
+</div>
+{% endif %}
+</div>
+
 <script>
     async function api(url, data) {
         try {
