@@ -3,16 +3,28 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.3.1"
+__version__ = "1.4.0"
 __version_info__ = {
     "major": 1,
-    "minor": 3,
-    "patch": 1,
+    "minor": 4,
+    "patch": 0,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.4.0",
+        "date": "2026-01-20",
+        "changes": [
+            "Concurrent Billing Safety: Added retry mechanism to prevent bill number collisions",
+            "Bulk Upload: Admin can now upload Item/Vazhipadu CSV with UPSERT support",
+            "Pagination: Implemented 10-item limit for Cashier History and Admin Reports",
+            "Reports Enhancement: Added Date Range filtering and accurate global totals",
+            "Backup Manager: Made the usage note permanent (no auto-dismiss)",
+            "CSV Export: Fixed export to respect date ranges and added date timestamps to filename"
+        ]
+    },
     {
         "version": "1.3.1",
         "date": "2026-01-19",
