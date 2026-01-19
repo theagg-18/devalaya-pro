@@ -511,6 +511,15 @@
     const MODE = '{{ mode }}';
     let lastPrintContent = ""; // For Reprint Logic
 
+    function escapeHTML(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function printContentInIframe(content) {
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
@@ -1111,9 +1120,9 @@
         }
 
         results.innerHTML = filtered.map(s => `
-            <div class="autocomplete-item" onclick="selectStar('${s.mal}')">
-                <span>${s.mal}</span>
-                <span class="eng-hint">${s.eng}</span>
+            <div class="autocomplete-item" onclick="selectStar('${escapeHTML(s.mal)}')">
+                <span>${escapeHTML(s.mal)}</span>
+                <span class="eng-hint">${escapeHTML(s.eng)}</span>
             </div>
         `).join('');
     }
