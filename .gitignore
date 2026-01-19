@@ -123,3 +123,6 @@ test_*.py
 .env.local
 .flaskenv
 
+
+# User Uploads (Privacy)
+static/uploads/

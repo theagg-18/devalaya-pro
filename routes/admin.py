@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, g
+from flask import Blueprint, render_template, request, flash, redirect, url_for, g, current_app
 import sqlite3
 from database import get_db
 from modules.printers import printer_manager
@@ -124,13 +124,44 @@ def settings():
         }
         custom_theme_colors = json.dumps(custom_colors)
         
+        
         backup = 1 if 'backup_enabled' in request.form else 0
         
-        db.execute(
-            '''UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, 
-               print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=? WHERE id=1''',
-            (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors)
-        )
+        # Handle Logo Upload
+        logo_path = None
+        if 'logo' in request.files:
+            file = request.files['logo']
+            if file and file.filename != '':
+                from werkzeug.utils import secure_filename
+                import os
+                
+                # Create upload dir
+                upload_folder = os.path.join(current_app.static_folder, 'uploads')
+                if not os.path.exists(upload_folder):
+                    os.makedirs(upload_folder)
+                
+                # Save file with timestamp to prevent cache
+                filename = secure_filename(file.filename)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                new_filename = f"logo_{timestamp}_{filename}"
+                file.save(os.path.join(upload_folder, new_filename))
+                
+                # Store relative path for static url_for
+                logo_path = f"uploads/{new_filename}"
+
+        # Construct Query
+        if logo_path:
+             db.execute(
+                '''UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, 
+                   print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=?, logo_path=? WHERE id=1''',
+                (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors, logo_path)
+            )
+        else:
+             db.execute(
+                '''UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, 
+                   print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=? WHERE id=1''',
+                (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors)
+            )
         db.commit()
         flash('Settings updated successfully', 'success')
         return redirect(url_for('admin.settings'))
@@ -372,31 +403,62 @@ def reports():
 def export_reports():
     import csv
     import io
-    from flask import Response
+    from flask import Response, stream_with_context
     
     db = get_db()
     date_filter = request.args.get('date')
     
-    # Export full dump for the day
+    # Export full dump for the day with Items
+    # utilizing GROUP_CONCAT to list items in the same row
     cursor = db.execute('''
-        SELECT b.id, b.created_at, u.username, b.devotee_name, b.star, b.total_amount
+        SELECT 
+            b.bill_no, 
+            b.created_at, 
+            u.username, 
+            b.devotee_name, 
+            b.star, 
+            GROUP_CONCAT(pm.name || ' (' || bi.count || ')', ', ') as items,
+            b.total_amount
         FROM bills b
         JOIN users u ON b.cashier_id = u.id
+        LEFT JOIN bill_items bi ON b.id = bi.bill_id
+        LEFT JOIN puja_master pm ON bi.puja_id = pm.id
         WHERE date(b.created_at) = ?
+        GROUP BY b.id
+        ORDER BY b.created_at DESC
     ''', (date_filter,))
     
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Bill ID', 'Date', 'Cashier', 'Devotee', 'Star', 'Amount'])
-    
-    for row in cursor:
-        writer.writerow(list(row))
+    # Use distinct BOM for Excel to recognize UTF-8
+    def generate():
+        # Write BOM
+        yield '\ufeff'
         
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Headers
+        writer.writerow(['Bill No', 'Date', 'Cashier', 'Devotee', 'Star', 'Items', 'Amount'])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        
+        for row in cursor:
+            # Handle potential None for items if bill has no lines (unlikely but safe)
+            row_list = list(row)
+            if row_list[5] is None:
+                row_list[5] = ""
+            
+            writer.writerow(row_list)
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
     return Response(
-        output.getvalue(),
+        stream_with_context(generate()),
         mimetype="text/csv",
         headers={"Content-disposition": f"attachment; filename=report_{date_filter}.csv"}
     )
+
 @admin_bp.route('/backups')
 def backups():
     import os
