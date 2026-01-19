@@ -9,13 +9,15 @@
             <form method="get" style="display: flex; gap: 0.5rem; align-items: center;">
                 <input type="text" name="q" value="{{ search_query }}" placeholder="Search Name/Bill..."
                     style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                <input type="date" name="date" value="{{ date_filter }}" style="width: auto;">
+                <input type="date" name="start_date" value="{{ start_date }}" title="From Date" style="width: auto;">
+                <input type="date" name="end_date" value="{{ end_date }}" title="To Date" style="width: auto;">
                 <button type="submit" class="btn btn-primary">Search</button>
-                {% if search_query or date_filter %}
+                {% if search_query or (start_date and start_date != end_date) %}
                 <a href="{{ url_for('admin.reports') }}" class="btn btn-secondary">Reset</a>
                 {% endif %}
             </form>
-            <a href="{{ url_for('admin.export_reports', date=date_filter) }}" class="btn btn-secondary">Export CSV</a>
+            <a href="{{ url_for('admin.export_reports', start_date=start_date, end_date=end_date) }}"
+                class="btn btn-secondary">Export CSV</a>
         </div>
     </div>
 
@@ -85,5 +87,28 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+        {% if current_page > 1 %}
+        <a href="{{ url_for('admin.reports', page=current_page-1, q=search_query, start_date=start_date, end_date=end_date) }}"
+            class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+            &laquo; Previous
+        </a>
+        {% endif %}
+
+        <span style="color: #64748b; font-size: 0.9rem;">
+            Page <strong>{{ current_page }}</strong> of {{ total_pages }}
+        </span>
+
+        {% if current_page < total_pages %} <a
+            href="{{ url_for('admin.reports', page=current_page+1, q=search_query, start_date=start_date, end_date=end_date) }}"
+            class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+            Next &raquo;
+            </a>
+            {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
