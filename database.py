@@ -60,7 +60,23 @@ def init_db():
         c.execute("ALTER TABLE temple_settings ADD COLUMN subtitle_mal TEXT")
     if 'subtitle_eng' not in setting_cols:
         c.execute("ALTER TABLE temple_settings ADD COLUMN subtitle_eng TEXT")
+    
+    # Check for color_theme
+    if 'color_theme' not in setting_cols:
+        c.execute("ALTER TABLE temple_settings ADD COLUMN color_theme TEXT DEFAULT 'kerala'")
         
+    if 'custom_theme_colors' not in setting_cols:
+        # Default to a safe fallback JSON
+        import json
+        default_custom = json.dumps({
+            'primary': '#000000',
+            'secondary': '#ffffff',
+            'background': '#f0f0f0',
+            'success': '#00ff00'
+        })
+        c.execute("ALTER TABLE temple_settings ADD COLUMN custom_theme_colors TEXT")
+        c.execute("UPDATE temple_settings SET custom_theme_colors = ?", (default_custom,))
+
     if 'print_template_content' not in setting_cols:
         c.execute("ALTER TABLE temple_settings ADD COLUMN print_template_content TEXT")
         # Set default template
