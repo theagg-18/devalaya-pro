@@ -749,7 +749,9 @@ def check_updates():
         return {'available': False, 'error': f"No releases found (GitHub {resp.status_code})"}
             
     except Exception as e:
-        return {'available': False, 'error': str(e)}
+        import logging
+        logging.error(f"Check updates failed: {e}", exc_info=True)
+        return {'available': False, 'error': 'Failed to check for updates.'}
 
 @admin_bp.route('/updates/install', methods=['POST'])
 def install_update():

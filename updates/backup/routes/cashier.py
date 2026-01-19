@@ -722,10 +722,12 @@ def checkout():
         
     except Exception as e:
         import traceback
+        import logging
+        logging.error(f"Checkout error: {e}", exc_info=True)
         with open('debug_checkout.log', 'w') as f:
             f.write(str(e))
             f.write(traceback.format_exc())
-        return {'status': 'error', 'message': str(e)}
+        return {'status': 'error', 'message': 'An error occurred during checkout. Please check logs.'}
 
 @cashier_bp.route('/billing/cart/resume-draft', methods=['POST'])
 @login_required
@@ -883,9 +885,13 @@ def reprint_bill(bill_id):
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                return {'status': 'error', 'message': f'Printer Error: {str(e)}'}
+                import logging
+                logging.error(f"Printer Error: {e}", exc_info=True)
+                return {'status': 'error', 'message': 'Printer Error. Please check the logs.'}
         
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return {'status': 'error', 'message': str(e)}
+        import logging
+        logging.error(f"Print Bill Action Failed: {e}", exc_info=True)
+        return {'status': 'error', 'message': 'An error occurred while printing. Check logs.'}
