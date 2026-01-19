@@ -637,8 +637,9 @@ def trigger_backup():
 def download_backup(filename):
     from config import Config
     import os
+    from werkzeug.utils import secure_filename
     
-    safe_filename = os.path.basename(filename)
+    safe_filename = secure_filename(filename)
     file_path = os.path.join(Config.BACKUP_PATH, safe_filename)
     
     if not os.path.exists(file_path):
@@ -651,8 +652,9 @@ def download_backup(filename):
 def delete_backup(filename):
     from config import Config
     import os
+    from werkzeug.utils import secure_filename
     
-    safe_filename = os.path.basename(filename)
+    safe_filename = secure_filename(filename)
     file_path = os.path.join(Config.BACKUP_PATH, safe_filename)
     
     try:
@@ -671,8 +673,9 @@ def restore_backup(filename):
     from config import Config
     import os
     import sqlite3
+    from werkzeug.utils import secure_filename
     
-    safe_filename = os.path.basename(filename)
+    safe_filename = secure_filename(filename)
     backup_path = os.path.join(Config.BACKUP_PATH, safe_filename)
     
     if not os.path.exists(backup_path):
