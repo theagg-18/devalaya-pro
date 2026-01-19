@@ -25,8 +25,8 @@
 <body>
     <header>
         <a href="/" class="brand">
-            <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Temple Logo"
-                style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+            <img src="{{ url_for('static', filename=temple_settings.logo_path) if temple_settings and temple_settings.logo_path else url_for('static', filename='logo.jpg') }}"
+                alt="Temple Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
             <span>{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</span>
         </a>
         <nav>

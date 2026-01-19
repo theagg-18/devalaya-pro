@@ -77,6 +77,9 @@ def init_db():
         c.execute("ALTER TABLE temple_settings ADD COLUMN custom_theme_colors TEXT")
         c.execute("UPDATE temple_settings SET custom_theme_colors = ?", (default_custom,))
 
+    if 'logo_path' not in setting_cols:
+        c.execute("ALTER TABLE temple_settings ADD COLUMN logo_path TEXT")
+
     if 'print_template_content' not in setting_cols:
         c.execute("ALTER TABLE temple_settings ADD COLUMN print_template_content TEXT")
         # Set default template

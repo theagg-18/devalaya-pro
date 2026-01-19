@@ -3,7 +3,12 @@
 {% block content %}
 <div style="max-width: 400px; margin: 4rem auto;">
     <div class="card">
-        <h2 class="text-center" style="margin-bottom: 2rem;">Login</h2>
+        <div class="text-center" style="margin-bottom: 2rem;">
+            <img src="{{ url_for('static', filename=temple_settings.logo_path) if temple_settings and temple_settings.logo_path else url_for('static', filename='logo.jpg') }}"
+                alt="Temple Logo"
+                style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary);">
+            <h2 style="margin-top: 1rem;">Login</h2>
+        </div>
         <form method="post">
             <div class="form-group">
                 <label for="username">User ID / Name</label>

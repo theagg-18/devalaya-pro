@@ -3,16 +3,27 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __version_info__ = {
     "major": 1,
-    "minor": 1,
+    "minor": 2,
     "patch": 0,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.2.0",
+        "date": "2026-01-19",
+        "changes": [
+            "Custom Logo upload feature with privacy protection",
+            "CSV export now includes item details for each bill",
+            "Fixed CSV encoding issue for Malayalam characters (UTF-8 BOM)",
+            "Added uploads directory to .gitignore for user privacy",
+            "Fixed missing route decorator in admin backups"
+        ]
+    },
     {
         "version": "1.1.0",
         "date": "2026-01-19",
