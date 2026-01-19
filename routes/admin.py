@@ -677,3 +677,86 @@ def reset_database():
     return redirect(url_for('admin.backups'))
 
 
+@admin_bp.route('/updates')
+def updates():
+    from modules import updater
+    from version import get_version
+    import requests
+    
+    # Check for github updates? (Optional, maybe strictly on demand to save quota)
+    # Just rendering page for now
+    return render_template('admin/updates.html', 
+                           current_version=get_version(),
+                           updater_status=updater.get_status())
+
+@admin_bp.route('/updates/check')
+def check_updates():
+    # Helper to check github releases
+    try:
+        import requests
+        repo_api = "https://api.github.com/repos/theagg-18/devalaya-pro/releases/latest"
+        tags_api = "https://api.github.com/repos/theagg-18/devalaya-pro/tags"
+        
+        # 1. Try Releases
+        resp = requests.get(repo_api, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return {
+                'available': True,
+                'version': data.get('tag_name', 'Unknown'),
+                'url': data.get('zipball_url', '')
+            }
+            
+        # 2. Fallback to Tags (if 404 on releases)
+        if resp.status_code == 404:
+            resp_tags = requests.get(tags_api, timeout=5)
+            if resp_tags.status_code == 200:
+                tags = resp_tags.json()
+                if tags:
+                    latest_tag = tags[0] # First is usually latest
+                    return {
+                        'available': True,
+                        'version': latest_tag.get('name', 'Unknown'),
+                        'url': latest_tag.get('zipball_url', ''),
+                        'note': 'Latests Tag (No Release)'
+                    }
+            return {'available': False, 'error': "No releases or tags found on GitHub."}
+            
+        return {'available': False, 'error': f"GitHub API Error: {resp.status_code}"}
+    except Exception as e:
+        return {'available': False, 'error': str(e)}
+
+@admin_bp.route('/updates/install', methods=['POST'])
+def install_update():
+    from modules import updater
+    
+    source = request.form.get('source') # URL or 'local'
+    is_url = True
+    
+    if source == 'local':
+        if 'update_file' not in request.files:
+            flash('No file uploaded', 'error')
+            return redirect(url_for('admin.updates'))
+        
+        file = request.files['update_file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('admin.updates'))
+            
+        # Save temp
+        import os
+        from werkzeug.utils import secure_filename
+        update_path = os.path.join(current_app.root_path, 'update_package.zip')
+        file.save(update_path)
+        source = update_path
+        is_url = False
+    
+    # Start Update Thread
+    updater.start_update_thread(source, is_url)
+    flash('Update process started. System will restart automatically.', 'info')
+    return redirect(url_for('admin.updates'))
+
+@admin_bp.route('/updates/status')
+def update_status():
+    from modules import updater
+    return updater.get_status()
