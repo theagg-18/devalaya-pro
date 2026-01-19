@@ -1,0 +1,1894 @@
+Run started:2026-01-19 19:40:00.595201+00:00
+
+Test results:
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\app.py:90:24
+89	                            custom_colors = json.loads(settings['custom_theme_colors'])
+90	                        except:
+91	                            pass
+92	                else:
+
+--------------------------------------------------
+>> Issue: [B201:flask_debug_true] A Flask app appears to be run with debug=True, which exposes the Werkzeug debugger and allows the execution of arbitrary code.
+   Severity: High   Confidence: Medium
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b201_flask_debug_true.html
+   Location: .\app.py:154:4
+153	if __name__ == '__main__':
+154	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\app.py:154:17
+153	if __name__ == '__main__':
+154	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\manager.py:3:0
+2	import sys
+3	import subprocess
+4	import shutil
+
+--------------------------------------------------
+>> Issue: [B605:start_process_with_a_shell] Starting a process with a shell, possible injection detected, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b605_start_process_with_a_shell.html
+   Location: .\manager.py:18:4
+17	def clear_screen():
+18	    os.system('cls' if os.name == 'nt' else 'clear')
+19	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:27:4
+26	    print("\n[+] Installing dependencies...")
+27	    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+28	    print("[+] Dependencies installed.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:69:12
+68	            print("[-] pywin32 not found. Installing to create shortcuts...")
+69	            subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+70	            create_shortcuts() # Retry
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (manager_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\manager.py:98:8
+97	            f.write(manager_content)
+98	        os.chmod(manager_path, 0o755)
+99	        
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (server_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\manager.py:117:8
+116	            f.write(server_content)
+117	        os.chmod(server_path, 0o755)
+118	        
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:144:12
+143	            script_path = os.path.join(migrations_dir, f)
+144	            subprocess.run([sys.executable, script_path], check=True, env=env)
+145	        except subprocess.CalledProcessError as e:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:235:21
+234	                if platform.system() == 'Windows':
+235	                     subprocess.Popen([sys.executable, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+236	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:237:21
+236	                else:
+237	                     subprocess.Popen([sys.executable, "run_prod.py"], start_new_session=True)
+238	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:246:21
+245	                if platform.system() == 'Windows':
+246	                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+247	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\manager.py:248:21
+247	                else:
+248	                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True)
+249	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\modules\printers.py:2:0
+1	import platform
+2	import subprocess
+3	import os
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\modules\updater.py:7:0
+6	import time
+7	import subprocess
+8	import requests
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b113_request_without_timeout.html
+   Location: .\modules\updater.py:94:16
+93	            # Download from GitHub or URL
+94	            r = requests.get(update_source, stream=True)
+95	            with open(zip_path, 'wb') as f:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\modules\updater.py:177:12
+176	            # CREATE_NEW_CONSOLE ensures it gets its own window if needed, or detaches
+177	            subprocess.Popen(restart_args, close_fds=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
+178	            # Give it a split second to spawn
+
+--------------------------------------------------
+>> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
+   Severity: Low   Confidence: Medium
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b606_start_process_with_no_shell.html
+   Location: .\modules\updater.py:183:12
+182	            # Unix exec
+183	            os.execv(sys.executable, [sys.executable] + sys.argv)
+184	            
+
+--------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b608_hardcoded_sql_expressions.html
+   Location: .\routes\admin.py:452:26
+451	    # 1. Calculate Global Totals (Revenue & Count) for the filtered set
+452	    grand_total_sql = f'''
+453	        SELECT COUNT(*), SUM(b.total_amount)
+454	        FROM bills b
+455	        WHERE {where_clause}
+456	    '''
+457	    stats = db.execute(grand_total_sql, params).fetchone()
+
+--------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b608_hardcoded_sql_expressions.html
+   Location: .\routes\admin.py:468:19
+467	    # 3. Fetch Paginated Records
+468	    data_sql = f'''
+469	        SELECT 
+470	            b.*,
+471	            u.username as cashier_name
+472	        FROM bills b
+473	        JOIN users u ON b.cashier_id = u.id
+474	        WHERE {where_clause}
+475	        ORDER BY b.created_at DESC
+476	        LIMIT ? OFFSET ?
+477	    '''
+478	    # We need a fresh params list for the data query because we append limit/offset
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\auth.py:48:11
+47	    # Generate new captcha for the next attempt
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\auth.py:49:11
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+50	    session['captcha_result'] = num1 + num2
+
+--------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b608_hardcoded_sql_expressions.html
+   Location: .\routes\cashier.py:135:18
+134	    # 1. Get Total Count
+135	    count_sql = f"SELECT COUNT(*) FROM ({sql})"
+136	    total_records = db.execute(count_sql, params).fetchone()[0]
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\routes\cashier.py:192:21
+191	                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+192	                     except:
+193	                        pass # Keep original string if parse fails
+194	                 elif hasattr(raw_date, 'strftime'):
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\cashier.py:521:35
+520	                        import time, random
+521	                        time.sleep(random.uniform(0.01, 0.05))
+522	                        continue
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\run_prod.py:3:0
+2	import platform
+3	import subprocess
+4	import sys
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\run_prod.py:34:28
+33	            print("Running with Waitress...")
+34	            serve(app, host='0.0.0.0', port=5000)
+35	        except ImportError:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\run_prod.py:37:12
+36	            print("Waitress not found. Installing...")
+37	            subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
+38	            from waitress import serve
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\run_prod.py:40:28
+39	            from wsgi import app
+40	            serve(app, host='0.0.0.0', port=5000)
+41	    else:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\backup\app.py:72:24
+71	                            custom_colors = json.loads(settings['custom_theme_colors'])
+72	                        except:
+73	                            pass
+74	                else:
+
+--------------------------------------------------
+>> Issue: [B201:flask_debug_true] A Flask app appears to be run with debug=True, which exposes the Werkzeug debugger and allows the execution of arbitrary code.
+   Severity: High   Confidence: Medium
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b201_flask_debug_true.html
+   Location: .\updates\backup\app.py:136:4
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\backup\app.py:136:17
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\backup\manager.py:3:0
+2	import sys
+3	import subprocess
+4	import shutil
+
+--------------------------------------------------
+>> Issue: [B605:start_process_with_a_shell] Starting a process with a shell, possible injection detected, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b605_start_process_with_a_shell.html
+   Location: .\updates\backup\manager.py:18:4
+17	def clear_screen():
+18	    os.system('cls' if os.name == 'nt' else 'clear')
+19	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:27:4
+26	    print("\n[+] Installing dependencies...")
+27	    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+28	    print("[+] Dependencies installed.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:69:12
+68	            print("[-] pywin32 not found. Installing to create shortcuts...")
+69	            subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+70	            create_shortcuts() # Retry
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (manager_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\backup\manager.py:98:8
+97	            f.write(manager_content)
+98	        os.chmod(manager_path, 0o755)
+99	        
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (server_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\backup\manager.py:117:8
+116	            f.write(server_content)
+117	        os.chmod(server_path, 0o755)
+118	        
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:144:12
+143	            script_path = os.path.join(migrations_dir, f)
+144	            subprocess.run([sys.executable, script_path], check=True, env=env)
+145	        except subprocess.CalledProcessError as e:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\backup\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:235:21
+234	                if platform.system() == 'Windows':
+235	                     subprocess.Popen([sys.executable, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+236	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:237:21
+236	                else:
+237	                     subprocess.Popen([sys.executable, "run_prod.py"], start_new_session=True)
+238	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:246:21
+245	                if platform.system() == 'Windows':
+246	                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+247	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\manager.py:248:21
+247	                else:
+248	                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True)
+249	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\backup\modules\printers.py:2:0
+1	import platform
+2	import subprocess
+3	import os
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\backup\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\backup\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\backup\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\backup\modules\updater.py:7:0
+6	import time
+7	import subprocess
+8	import requests
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b113_request_without_timeout.html
+   Location: .\updates\backup\modules\updater.py:94:16
+93	            # Download from GitHub or URL
+94	            r = requests.get(update_source, stream=True)
+95	            with open(zip_path, 'wb') as f:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\modules\updater.py:177:12
+176	            # CREATE_NEW_CONSOLE ensures it gets its own window if needed, or detaches
+177	            subprocess.Popen(restart_args, close_fds=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
+178	            # Give it a split second to spawn
+
+--------------------------------------------------
+>> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
+   Severity: Low   Confidence: Medium
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b606_start_process_with_no_shell.html
+   Location: .\updates\backup\modules\updater.py:183:12
+182	            # Unix exec
+183	            os.execv(sys.executable, [sys.executable] + sys.argv)
+184	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\backup\routes\auth.py:48:11
+47	    # Generate new captcha for the next attempt
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\backup\routes\auth.py:49:11
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+50	    session['captcha_result'] = num1 + num2
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\backup\routes\cashier.py:179:21
+178	                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+179	                     except:
+180	                        pass # Keep original string if parse fails
+181	                 elif hasattr(raw_date, 'strftime'):
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\backup\run_prod.py:3:0
+2	import platform
+3	import subprocess
+4	import sys
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\backup\run_prod.py:34:28
+33	            print("Running with Waitress...")
+34	            serve(app, host='0.0.0.0', port=5000)
+35	        except ImportError:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\run_prod.py:37:12
+36	            print("Waitress not found. Installing...")
+37	            subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
+38	            from waitress import serve
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\backup\run_prod.py:40:28
+39	            from wsgi import app
+40	            serve(app, host='0.0.0.0', port=5000)
+41	    else:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\backup\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\backup\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\temp\app.py:72:24
+71	                            custom_colors = json.loads(settings['custom_theme_colors'])
+72	                        except:
+73	                            pass
+74	                else:
+
+--------------------------------------------------
+>> Issue: [B201:flask_debug_true] A Flask app appears to be run with debug=True, which exposes the Werkzeug debugger and allows the execution of arbitrary code.
+   Severity: High   Confidence: Medium
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b201_flask_debug_true.html
+   Location: .\updates\temp\app.py:136:4
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\app.py:136:17
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\manager.py:3:0
+2	import sys
+3	import subprocess
+4	import shutil
+
+--------------------------------------------------
+>> Issue: [B605:start_process_with_a_shell] Starting a process with a shell, possible injection detected, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b605_start_process_with_a_shell.html
+   Location: .\updates\temp\manager.py:18:4
+17	def clear_screen():
+18	    os.system('cls' if os.name == 'nt' else 'clear')
+19	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:27:4
+26	    print("\n[+] Installing dependencies...")
+27	    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+28	    print("[+] Dependencies installed.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:69:12
+68	            print("[-] pywin32 not found. Installing to create shortcuts...")
+69	            subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+70	            create_shortcuts() # Retry
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (manager_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\temp\manager.py:98:8
+97	            f.write(manager_content)
+98	        os.chmod(manager_path, 0o755)
+99	        
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (server_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\temp\manager.py:117:8
+116	            f.write(server_content)
+117	        os.chmod(server_path, 0o755)
+118	        
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:144:12
+143	            script_path = os.path.join(migrations_dir, f)
+144	            subprocess.run([sys.executable, script_path], check=True, env=env)
+145	        except subprocess.CalledProcessError as e:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:235:21
+234	                if platform.system() == 'Windows':
+235	                     subprocess.Popen([sys.executable, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+236	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:237:21
+236	                else:
+237	                     subprocess.Popen([sys.executable, "run_prod.py"], start_new_session=True)
+238	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:246:21
+245	                if platform.system() == 'Windows':
+246	                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+247	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\manager.py:248:21
+247	                else:
+248	                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True)
+249	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\modules\printers.py:2:0
+1	import platform
+2	import subprocess
+3	import os
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\modules\updater.py:7:0
+6	import time
+7	import subprocess
+8	import requests
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b113_request_without_timeout.html
+   Location: .\updates\temp\modules\updater.py:94:16
+93	            # Download from GitHub or URL
+94	            r = requests.get(update_source, stream=True)
+95	            with open(zip_path, 'wb') as f:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\modules\updater.py:177:12
+176	            # CREATE_NEW_CONSOLE ensures it gets its own window if needed, or detaches
+177	            subprocess.Popen(restart_args, close_fds=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
+178	            # Give it a split second to spawn
+
+--------------------------------------------------
+>> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
+   Severity: Low   Confidence: Medium
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b606_start_process_with_no_shell.html
+   Location: .\updates\temp\modules\updater.py:183:12
+182	            # Unix exec
+183	            os.execv(sys.executable, [sys.executable] + sys.argv)
+184	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\temp\routes\auth.py:48:11
+47	    # Generate new captcha for the next attempt
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\temp\routes\auth.py:49:11
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+50	    session['captcha_result'] = num1 + num2
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\temp\routes\cashier.py:179:21
+178	                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+179	                     except:
+180	                        pass # Keep original string if parse fails
+181	                 elif hasattr(raw_date, 'strftime'):
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\run_prod.py:3:0
+2	import platform
+3	import subprocess
+4	import sys
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\run_prod.py:34:28
+33	            print("Running with Waitress...")
+34	            serve(app, host='0.0.0.0', port=5000)
+35	        except ImportError:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\run_prod.py:37:12
+36	            print("Waitress not found. Installing...")
+37	            subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
+38	            from waitress import serve
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\run_prod.py:40:28
+39	            from wsgi import app
+40	            serve(app, host='0.0.0.0', port=5000)
+41	    else:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\temp\updates\backup\app.py:72:24
+71	                            custom_colors = json.loads(settings['custom_theme_colors'])
+72	                        except:
+73	                            pass
+74	                else:
+
+--------------------------------------------------
+>> Issue: [B201:flask_debug_true] A Flask app appears to be run with debug=True, which exposes the Werkzeug debugger and allows the execution of arbitrary code.
+   Severity: High   Confidence: Medium
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b201_flask_debug_true.html
+   Location: .\updates\temp\updates\backup\app.py:136:4
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\updates\backup\app.py:136:17
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\backup\manager.py:3:0
+2	import sys
+3	import subprocess
+4	import shutil
+
+--------------------------------------------------
+>> Issue: [B605:start_process_with_a_shell] Starting a process with a shell, possible injection detected, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b605_start_process_with_a_shell.html
+   Location: .\updates\temp\updates\backup\manager.py:18:4
+17	def clear_screen():
+18	    os.system('cls' if os.name == 'nt' else 'clear')
+19	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:27:4
+26	    print("\n[+] Installing dependencies...")
+27	    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+28	    print("[+] Dependencies installed.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:69:12
+68	            print("[-] pywin32 not found. Installing to create shortcuts...")
+69	            subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+70	            create_shortcuts() # Retry
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (manager_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\temp\updates\backup\manager.py:98:8
+97	            f.write(manager_content)
+98	        os.chmod(manager_path, 0o755)
+99	        
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (server_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\temp\updates\backup\manager.py:117:8
+116	            f.write(server_content)
+117	        os.chmod(server_path, 0o755)
+118	        
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:144:12
+143	            script_path = os.path.join(migrations_dir, f)
+144	            subprocess.run([sys.executable, script_path], check=True, env=env)
+145	        except subprocess.CalledProcessError as e:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\backup\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:235:21
+234	                if platform.system() == 'Windows':
+235	                     subprocess.Popen([sys.executable, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+236	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:237:21
+236	                else:
+237	                     subprocess.Popen([sys.executable, "run_prod.py"], start_new_session=True)
+238	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:246:21
+245	                if platform.system() == 'Windows':
+246	                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+247	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\manager.py:248:21
+247	                else:
+248	                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True)
+249	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\backup\modules\printers.py:2:0
+1	import platform
+2	import subprocess
+3	import os
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\backup\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\backup\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\backup\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\backup\modules\updater.py:7:0
+6	import time
+7	import subprocess
+8	import requests
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b113_request_without_timeout.html
+   Location: .\updates\temp\updates\backup\modules\updater.py:94:16
+93	            # Download from GitHub or URL
+94	            r = requests.get(update_source, stream=True)
+95	            with open(zip_path, 'wb') as f:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\modules\updater.py:163:12
+162	            args = [sys.executable] + sys.argv
+163	            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE)
+164	            os._exit(0)
+
+--------------------------------------------------
+>> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
+   Severity: Low   Confidence: Medium
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b606_start_process_with_no_shell.html
+   Location: .\updates\temp\updates\backup\modules\updater.py:167:12
+166	            # Unix exec
+167	            os.execv(sys.executable, [sys.executable] + sys.argv)
+168	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\temp\updates\backup\routes\auth.py:48:11
+47	    # Generate new captcha for the next attempt
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\temp\updates\backup\routes\auth.py:49:11
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+50	    session['captcha_result'] = num1 + num2
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\temp\updates\backup\routes\cashier.py:179:21
+178	                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+179	                     except:
+180	                        pass # Keep original string if parse fails
+181	                 elif hasattr(raw_date, 'strftime'):
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\backup\run_prod.py:3:0
+2	import platform
+3	import subprocess
+4	import sys
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\updates\backup\run_prod.py:34:28
+33	            print("Running with Waitress...")
+34	            serve(app, host='0.0.0.0', port=5000)
+35	        except ImportError:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\run_prod.py:37:12
+36	            print("Waitress not found. Installing...")
+37	            subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
+38	            from waitress import serve
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\updates\backup\run_prod.py:40:28
+39	            from wsgi import app
+40	            serve(app, host='0.0.0.0', port=5000)
+41	    else:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\backup\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\backup\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\temp\updates\temp\app.py:72:24
+71	                            custom_colors = json.loads(settings['custom_theme_colors'])
+72	                        except:
+73	                            pass
+74	                else:
+
+--------------------------------------------------
+>> Issue: [B201:flask_debug_true] A Flask app appears to be run with debug=True, which exposes the Werkzeug debugger and allows the execution of arbitrary code.
+   Severity: High   Confidence: Medium
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b201_flask_debug_true.html
+   Location: .\updates\temp\updates\temp\app.py:136:4
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\updates\temp\app.py:136:17
+135	if __name__ == '__main__':
+136	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\temp\manager.py:3:0
+2	import sys
+3	import subprocess
+4	import shutil
+
+--------------------------------------------------
+>> Issue: [B605:start_process_with_a_shell] Starting a process with a shell, possible injection detected, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b605_start_process_with_a_shell.html
+   Location: .\updates\temp\updates\temp\manager.py:18:4
+17	def clear_screen():
+18	    os.system('cls' if os.name == 'nt' else 'clear')
+19	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:27:4
+26	    print("\n[+] Installing dependencies...")
+27	    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+28	    print("[+] Dependencies installed.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:69:12
+68	            print("[-] pywin32 not found. Installing to create shortcuts...")
+69	            subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+70	            create_shortcuts() # Retry
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (manager_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\temp\updates\temp\manager.py:98:8
+97	            f.write(manager_content)
+98	        os.chmod(manager_path, 0o755)
+99	        
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o755 on file (server_path).
+   Severity: Medium   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b103_set_bad_file_permissions.html
+   Location: .\updates\temp\updates\temp\manager.py:117:8
+116	            f.write(server_content)
+117	        os.chmod(server_path, 0o755)
+118	        
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:144:12
+143	            script_path = os.path.join(migrations_dir, f)
+144	            subprocess.run([sys.executable, script_path], check=True, env=env)
+145	        except subprocess.CalledProcessError as e:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\temp\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:175:12
+174	        try:
+175	            subprocess.run(["git", "pull"], check=True)
+176	            print("[+] Code updated from Git.")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:235:21
+234	                if platform.system() == 'Windows':
+235	                     subprocess.Popen([sys.executable, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+236	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:237:21
+236	                else:
+237	                     subprocess.Popen([sys.executable, "run_prod.py"], start_new_session=True)
+238	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:246:21
+245	                if platform.system() == 'Windows':
+246	                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+247	                else:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\manager.py:248:21
+247	                else:
+248	                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True)
+249	                time.sleep(2)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\temp\modules\printers.py:2:0
+1	import platform
+2	import subprocess
+3	import os
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\temp\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\modules\printers.py:18:25
+17	                # Run lpstat -a to get list of printers
+18	                result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
+19	                printers = []
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\temp\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\modules\printers.py:45:20
+44	                    # Print using lp
+45	                    subprocess.run(['lp', '-d', printer_name, fp.name], check=True)
+46	                    os.unlink(fp.name)
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\temp\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\modules\printers.py:61:25
+60	            try:
+61	                result = subprocess.run(['lpstat', '-p', printer_name], capture_output=True, text=True)
+62	                if "enabled" in result.stdout and "idle" in result.stdout:
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\temp\modules\updater.py:7:0
+6	import time
+7	import subprocess
+8	import requests
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b113_request_without_timeout.html
+   Location: .\updates\temp\updates\temp\modules\updater.py:94:16
+93	            # Download from GitHub or URL
+94	            r = requests.get(update_source, stream=True)
+95	            with open(zip_path, 'wb') as f:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\modules\updater.py:163:12
+162	            args = [sys.executable] + sys.argv
+163	            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE)
+164	            os._exit(0)
+
+--------------------------------------------------
+>> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
+   Severity: Low   Confidence: Medium
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b606_start_process_with_no_shell.html
+   Location: .\updates\temp\updates\temp\modules\updater.py:167:12
+166	            # Unix exec
+167	            os.execv(sys.executable, [sys.executable] + sys.argv)
+168	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\temp\updates\temp\routes\auth.py:48:11
+47	    # Generate new captcha for the next attempt
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\updates\temp\updates\temp\routes\auth.py:49:11
+48	    num1 = random.randint(1, 9)
+49	    num2 = random.randint(1, 9)
+50	    session['captcha_result'] = num1 + num2
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: .\updates\temp\updates\temp\routes\cashier.py:179:21
+178	                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+179	                     except:
+180	                        pass # Keep original string if parse fails
+181	                 elif hasattr(raw_date, 'strftime'):
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\updates\temp\updates\temp\run_prod.py:3:0
+2	import platform
+3	import subprocess
+4	import sys
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\updates\temp\run_prod.py:34:28
+33	            print("Running with Waitress...")
+34	            serve(app, host='0.0.0.0', port=5000)
+35	        except ImportError:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\run_prod.py:37:12
+36	            print("Waitress not found. Installing...")
+37	            subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
+38	            from waitress import serve
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\updates\temp\updates\temp\run_prod.py:40:28
+39	            from wsgi import app
+40	            serve(app, host='0.0.0.0', port=5000)
+41	    else:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b607_start_process_with_partial_path.html
+   Location: .\updates\temp\updates\temp\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\updates\temp\updates\temp\run_prod.py:44:8
+43	        # For Linux/RPi, we use the config file we created
+44	        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+45	
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\verify_concurrency.py:37:23
+36	            # Artificial delay to force collision
+37	            time.sleep(random.uniform(0.001, 0.005))
+38	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: .\verify_concurrency.py:46:23
+45	            print(f"Thread {thread_id}: Collision on {new_seq}, retrying...")
+46	            time.sleep(random.uniform(0.001, 0.01))
+47	            continue
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 12915
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 143
+		Medium: 33
+		High: 10
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 8
+		Medium: 25
+		High: 153
+Files skipped (0):
