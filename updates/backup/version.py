@@ -3,24 +3,16 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.3.1"
+__version__ = "1.3.0"
 __version_info__ = {
     "major": 1,
     "minor": 3,
-    "patch": 1,
+    "patch": 0,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
-    {
-        "version": "1.3.1",
-        "date": "2026-01-19",
-        "changes": [
-            "Test Update: Verified auto-update functionality",
-            "Minor stability improvements"
-        ]
-    },
     {
         "version": "1.3.0",
         "date": "2026-01-19",
