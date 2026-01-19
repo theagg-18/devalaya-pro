@@ -1,0 +1,109 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="card">
+    <h2>User Management</h2>
+
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+        <h3>Add New User</h3>
+        <form method="post" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label for="username">Username</label>
+                <input type="text" name="username" required>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+                <label for="pin">PIN / Password</label>
+                <input type="text" name="pin" required>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+                <label for="role">Role</label>
+                <select name="role">
+                    <option value="cashier">Cashier</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" name="create_user" class="btn btn-primary">Add User</button>
+            </div>
+        </form>
+    </div>
+
+    <h3>Existing Users</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
+                <th style="padding: 12px;">ID</th>
+                <th style="padding: 12px;">Username</th>
+                <th style="padding: 12px;">Role</th>
+                <th style="padding: 12px;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px;">{{ user.id }}</td>
+                <td style="padding: 12px;">
+                    {{ user.username }}
+                    {% if not user.is_active %}<span style="color:red; font-size:0.8rem;">(Inactive)</span>{% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    <span class="badge-{{ user.role }}">
+                        {{ user.role|upper }}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    <button onclick="openPinModal('{{ user.id }}', '{{ user.username }}')" class="btn-text">
+                        Change PIN
+                    </button>
+
+                    <form method="post" style="display: inline-block;">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <input type="hidden" name="is_active" value="{{ 0 if user.is_active else 1 }}">
+                        <button type="submit" name="toggle_active"
+                            class="btn-text {{ 'btn-text-danger' if user.is_active else 'btn-text-success' }}">
+                            {{ 'Deactivate' if user.is_active else 'Activate' }}
+                        </button>
+                    </form>
+
+                    <form method="post" style="display: inline-block;">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <button type="submit" name="delete_user" class="btn-text btn-text-muted">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Edit PIN Modal -->
+    <div id="pinModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+        <div class="card" style="width: 100%; max-width: 400px; padding: 2rem; margin: auto;">
+            <h3 style="margin-bottom: 0.5rem;">Change Password / PIN</h3>
+            <p id="pinUserDisplay" style="color: #64748b; margin-bottom: 1.5rem;"></p>
+            <form method="post">
+                <input type="hidden" name="user_id" id="pin_user_id">
+
+                <div class="form-group">
+                    <label>New PIN / Password</label>
+                    <input type="text" name="new_pin" required placeholder="Enter new PIN">
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('pinModal').style.display='none'"
+                        class="btn btn-secondary">Cancel</button>
+                    <button type="submit" name="change_pin" class="btn btn-primary">Update PIN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openPinModal(id, username) {
+            document.getElementById('pin_user_id').value = id;
+            document.getElementById('pinUserDisplay').innerText = "User: " + username;
+            document.getElementById('pinModal').style.display = 'flex';
+        }
+    </script>
+</div>
+{% endblock %}

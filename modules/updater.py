@@ -157,10 +157,26 @@ def perform_update(update_source, is_url=True):
         MAINTENANCE_MODE = False # Will be reset by restart anyway
         
         # Trigger Restart
+        # Ensure we are passing the correct arguments
+        python_executable = sys.executable
+        script_args = sys.argv[:]
+        
+        # If running as script, ensure absolute path
+        if script_args and script_args[0].endswith('.py'):
+            if not os.path.isabs(script_args[0]):
+                script_args[0] = os.path.abspath(script_args[0])
+
+        restart_args = [python_executable] + script_args
+        
+        print(f"Restarting with args: {restart_args}")
+        
         if sys.platform == 'win32':
             # Windows restart
-            args = [sys.executable] + sys.argv
-            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            # close_fds=True ensures the new process doesn't hang on to our open pipes (if any)
+            # CREATE_NEW_CONSOLE ensures it gets its own window if needed, or detaches
+            subprocess.Popen(restart_args, close_fds=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            # Give it a split second to spawn
+            time.sleep(0.5) 
             os._exit(0)
         else:
             # Unix exec

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+
+    <!-- Dynamic Theme CSS -->
+    {% if temple_settings and temple_settings.color_theme %}
+    {% include 'theme_css.html' %}
+    {% endif %}
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <header>
+        <a href="/" class="brand">
+            <img src="{{ url_for('static', filename=temple_settings.logo_path) if temple_settings and temple_settings.logo_path else url_for('static', filename='logo.jpg') }}"
+                alt="Temple Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+            <span>{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</span>
+        </a>
+        <nav>
+            {% if g.user %}
+            <a href="/dashboard">Dashboard</a>
+            {% if g.user.role == 'cashier' %}
+            <a href="{{ url_for('cashier.history') }}">History</a>
+            {% endif %}
+            <a href="/logout">Logout ({{ g.user.username }})</a>
+            {% else %}
+            <a href="/login" class="btn btn-primary">Login</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="alerts">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center" style="padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
+        <p>&copy; {{ now_year }} {{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</p>
+        <p style="margin-top: 0.5rem; opacity: 0.7;">Powered by {{ app_version_display }}</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+    <script>
+        function confirmAction(event, message) {
+            if (!confirm(message || 'Are you sure?')) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                // Dimiss on click
+                alert.addEventListener('click', () => {
+                    alert.style.animation = 'fadeOut 0.3s ease-out forwards';
+                    setTimeout(() => alert.remove(), 300);
+                });
+
+                // Auto dismiss after 5 seconds
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.style.animation = 'fadeOut 0.3s ease-out forwards';
+                        setTimeout(() => alert.remove(), 300);
+                    }
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+
+</html>
