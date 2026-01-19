@@ -15,6 +15,22 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(cashier_bp)
 
+@app.route('/health')
+def health_check():
+    return 'OK', 200
+
+@app.before_request
+def check_maintenance():
+    from modules import updater
+    from flask import request, abort
+    if updater.MAINTENANCE_MODE:
+        # Allow static (for styles), updater status polling, and health check
+        if request.path.startswith('/static') or \
+           request.path.startswith('/admin/updates/status') or \
+           request.path == '/health':
+            return None
+        return "System is updating... Please wait.", 503
+
 @app.template_filter('from_json')
 def from_json_filter(value):
     import json

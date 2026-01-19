@@ -3,16 +3,27 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __version_info__ = {
     "major": 1,
-    "minor": 2,
+    "minor": 3,
     "patch": 0,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.3.0",
+        "date": "2026-01-19",
+        "changes": [
+            "Implemented Safe Update System with Auto-Rollback",
+            "Added Maintenance Mode locking mechanism",
+            "Added /health endpoint for system status checks",
+            "New Admin Update Dashboard (Online & Offline support)",
+            "Integrated GitHub API for update checking"
+        ]
+    },
     {
         "version": "1.2.0",
         "date": "2026-01-19",
