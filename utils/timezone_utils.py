@@ -6,6 +6,7 @@ All datetime operations should use these utilities to ensure consistency.
 """
 
 from datetime import datetime, timezone, timedelta
+import logging
 
 # IST is UTC+5:30
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -55,7 +56,7 @@ def parse_db_timestamp(timestamp_str):
         # Assume database timestamps are in IST and add timezone info
         return dt_obj.replace(tzinfo=IST)
     except Exception as e:
-        print(f"Error parsing timestamp '{timestamp_str}': {e}")
+        logging.error(f"Error parsing timestamp '{timestamp_str}': {e}")
         return None
 
 def format_ist_datetime(dt, format_str='%d-%m-%Y %H:%M'):
