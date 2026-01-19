@@ -5,6 +5,7 @@ from routes.admin import admin_bp
 from routes.auth import auth_bp
 from routes.cashier import cashier_bp
 from utils.timezone_utils import now_ist
+from version import get_version, get_version_display
 import os
 
 app = Flask(__name__)
@@ -14,11 +15,23 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(cashier_bp)
 
+@app.template_filter('from_json')
+def from_json_filter(value):
+    import json
+    try:
+        if not value:
+            return {}
+        return json.loads(value)
+    except:
+        return {}
+
 @app.context_processor
 def inject_settings():
     from database import get_db
     from routes.cashier import STARS
+    from themes import get_theme_css
     import datetime
+    import traceback
     
     star_map = {s['eng']: s['mal'] for s in STARS}
     
@@ -26,18 +39,50 @@ def inject_settings():
         try:
             db = get_db()
             settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+            
+            # Get theme CSS with error handling
+            theme_css = ""
+            try:
+                if settings:
+                    # Check if color_theme column exists
+                    theme_name = settings['color_theme'] if 'color_theme' in settings.keys() else 'kerala'
+                    
+                    # Parse custom colors if available
+                    custom_colors = None
+                    if 'custom_theme_colors' in settings.keys() and settings['custom_theme_colors']:
+                        import json
+                        try:
+                            custom_colors = json.loads(settings['custom_theme_colors'])
+                        except:
+                            pass
+                else:
+                    theme_name = 'kerala'
+                    custom_colors = None
+                    
+                theme_css = get_theme_css(theme_name, custom_colors)
+            except Exception as e:
+                print(f"ERROR generating theme CSS: {e}")
+                traceback.print_exc()
+                theme_css = get_theme_css('kerala')  # Fallback to default
+            
             return {
                 'temple_settings': settings,
                 'now_year': now_ist().year,
                 'stars': STARS,
-                'star_map': star_map
+                'star_map': star_map,
+                'app_version': get_version(),
+                'app_version_display': get_version_display(),
+                'theme_css': theme_css
             }
-        except:
+        except Exception as e:
+            print(f"ERROR in context processor: {e}")
+            traceback.print_exc()
             return {
                 'temple_settings': None,
                 'now_year': datetime.datetime.now().year,
                 'stars': STARS,
-                'star_map': star_map
+                'star_map': star_map,
+                'theme_css': get_theme_css('kerala')  # Default theme
             }
 
 # Register Database Teardown

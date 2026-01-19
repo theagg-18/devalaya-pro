@@ -113,11 +113,23 @@ def settings():
         template_content = request.form['print_template_content']
         subtitle_mal = request.form.get('subtitle_mal', '')
         subtitle_eng = request.form.get('subtitle_eng', '')
+        color_theme = request.form.get('color_theme', 'kerala')
+        
+        # Handle Custom Theme Colors
+        import json
+        custom_colors = {
+            'primary': request.form.get('custom_primary', '#000000'),
+            'secondary': request.form.get('custom_secondary', '#ffffff'),
+            'background': request.form.get('custom_background', '#f5f5f5')
+        }
+        custom_theme_colors = json.dumps(custom_colors)
+        
         backup = 1 if 'backup_enabled' in request.form else 0
         
         db.execute(
-            'UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, print_template_content=?, subtitle_mal=?, subtitle_eng=? WHERE id=1',
-            (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng)
+            '''UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, 
+               print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=? WHERE id=1''',
+            (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors)
         )
         db.commit()
         flash('Settings updated successfully', 'success')

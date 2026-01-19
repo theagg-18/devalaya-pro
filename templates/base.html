@@ -13,13 +13,21 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+
+    <!-- Dynamic Theme CSS -->
+    {% if temple_settings and temple_settings.color_theme %}
+    {% include 'theme_css.html' %}
+    {% endif %}
+
     {% block head %}{% endblock %}
 </head>
 
 <body>
     <header>
         <a href="/" class="brand">
-            🔱 <span>{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</span>
+            <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Temple Logo"
+                style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+            <span>{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</span>
         </a>
         <nav>
             {% if g.user %}
@@ -50,7 +58,7 @@
 
     <footer class="text-center" style="padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
         <p>&copy; {{ now_year }} {{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</p>
-        <p style="margin-top: 0.5rem; opacity: 0.7;">Powered by Devalaya Pro</p>
+        <p style="margin-top: 0.5rem; opacity: 0.7;">Powered by {{ app_version_display }}</p>
     </footer>
 
     {% block scripts %}{% endblock %}

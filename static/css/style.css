@@ -1,29 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap');
 
 :root {
-    /* Premium Color Palette (HSL) */
-    --primary-h: 220;
-    --primary-s: 90%;
-    --primary-l: 56%;
-    --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
+    /* Kerala Temple Color Palette - Kumkum & Chandan Theme */
+    /* Primary - Deep Maroon/Crimson (Kumkum) */
+    --primary-h: 0;
+    --primary-s: 100%;
+    --primary-l: 27%;
+    --primary: #8B0000;
+    /* Deep Maroon */
 
-    --accent-h: 35;
-    --accent-s: 95%;
-    --accent-l: 58%;
-    --accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+    /* Secondary - Goldenrod (Chandan) */
+    --accent-h: 43;
+    --accent-s: 74%;
+    --accent-l: 49%;
+    --accent: #DAA520;
+    /* Goldenrod */
 
-    --bg-h: 210;
-    --bg-s: 30%;
-    --bg-l: 98%;
-    --bg: hsl(var(--bg-h), var(--bg-s), var(--bg-l));
+    /* Background - Old Lace/Creamy White */
+    --bg-h: 39;
+    --bg-s: 67%;
+    --bg-l: 96%;
+    --bg: #FDF5E6;
+    /* Old Lace */
 
+    /* Surface - Pure White for cards */
     --surface-h: 0;
     --surface-s: 0%;
     --surface-l: 100%;
-    --surface: hsl(var(--surface-h), var(--surface-s), var(--surface-l));
+    --surface: #FFFFFF;
 
-    --text-main: hsl(210, 20%, 20%);
-    --text-muted: hsl(210, 15%, 50%);
+    /* Text Colors */
+    --text-main: #2C2C2C;
+    /* Dark Charcoal */
+    --text-muted: #64748b;
+
+    /* Success - Temple Green */
+    --success: #2E7D32;
 
     /* Spacing */
     --spacing-xs: 4px;
@@ -32,10 +44,10 @@
     --spacing-lg: 24px;
     --spacing-xl: 32px;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.05);
+    /* Shadows - Warmer tones for temple theme */
+    --shadow-sm: 0 1px 2px rgba(var(--primary-rgb), 0.08);
+    --shadow-md: 0 4px 6px rgba(var(--primary-rgb), 0.08), 0 1px 3px rgba(var(--primary-rgb), 0.12);
+    --shadow-lg: 0 10px 15px rgba(var(--primary-rgb), 0.1), 0 4px 6px rgba(var(--primary-rgb), 0.08);
 
     /* Radius */
     --radius-sm: 6px;
@@ -151,12 +163,13 @@ h3 {
 .btn-primary {
     background: var(--primary);
     color: white;
-    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 4px 6px rgba(var(--primary-rgb), 0.3);
 }
 
 .btn-primary:hover {
-    background: hsl(var(--primary-h), var(--primary-s), 50%);
+    background: var(--primary-hover);
     transform: translateY(-1px);
+    box-shadow: 0 6px 8px rgba(var(--primary-rgb), 0.35);
 }
 
 .btn-secondary {
@@ -190,7 +203,7 @@ h3 {
 }
 
 .btn-text-success {
-    color: #22c55e;
+    color: var(--success);
 }
 
 .btn-text-muted {
@@ -264,7 +277,7 @@ input:focus,
 select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
 }
 
 .badge-admin {
@@ -463,9 +476,9 @@ select:focus {
 }
 
 .alert-success {
-    border-left-color: #22c55e;
-    background: #f0fdf4;
-    color: #166534;
+    border-left-color: var(--success);
+    background: #f1f8f4;
+    color: #1b5e20;
 }
 
 @keyframes slideIn {
