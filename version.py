@@ -3,16 +3,26 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 1,
+    "patch": 2,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.2",
+        "date": "2026-01-21",
+        "changes": [
+            "Manager Script: Added fallback to GitHub Tags API (Fixes 404 errors)",
+            "Manager Script: Configured User-Agent headers for reliable API access",
+            "Admin Panel: Integrated robust non-Git update logic matching Manager script",
+            "Release Automation: Added publish_release.py script"
+        ]
+    },
     {
         "version": "1.5.1",
         "date": "2026-01-21",
