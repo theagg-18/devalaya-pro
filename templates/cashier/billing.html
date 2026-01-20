@@ -156,29 +156,59 @@
                 <span id="cartTotal">₹{{ "%.0f"|format(cart.total|default(0)) }}</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                    <button onclick="clearCart()" class="btn btn-secondary"
-                        style="border-color: #ef4444; color: #ef4444; flex: 1;">Clear</button>
-                    <button onclick="saveDraft()" class="btn btn-secondary" title="Save as Draft"
-                        style="border-color: #f59e0b; color: #f59e0b; flex: 1;">Save Draft</button>
+            {% if cart.is_edit_mode %}
+            <div id="editModeTotals"
+                style="background: #fff7ed; border: 1px dashed #fdba74; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div
+                    style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; color: #64748b;">
+                    <span>Original Bill Total:</span>
+                    <span>₹{{ "%.0f"|format(cart.original_total|default(0)) }}</span>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="addToBatch()" class="btn btn-secondary"
-                            style="border-color: var(--primary); color: var(--primary); flex: 1;">Save to
-                            Batch</button>
-                        <button onclick="showReplicateModal()" class="btn btn-secondary"
-                            title="Replicate to Multiple Dates"
-                            style="border-color: #7e22ce; color: #7e22ce; flex: 0 0 auto;">📅+</button>
-                    </div>
-                    <button onclick="processUnifiedPrint()" class="btn btn-primary"
-                        style="background: #22c55e; border-color: #22c55e; flex: 1;">Print Receipt</button>
+                {% set diff = (cart.total|default(0) - cart.original_total|default(0)) %}
+
+                {% if diff < 0 %} <div id="editModeDiff"
+                    style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: #166534; border-top: 1px solid #fed7aa; padding-top: 4px; margin-top: 4px;">
+                    <span>Cashier to Refund:</span>
+                    <span>₹{{ "%.0f"|format(diff|abs) }}</span>
+            </div>
+            {% else %}
+            <div id="editModeDiff"
+                style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: #b91c1c; border-top: 1px solid #fed7aa; padding-top: 4px; margin-top: 4px;">
+                <span>Devotee to Pay:</span>
+                <span>₹{{ "%.0f"|format(diff|abs) }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <button onclick="clearCart()" class="btn btn-secondary"
+                    style="border-color: #ef4444; color: #ef4444; flex: 1;">Clear</button>
+                <button onclick="saveDraft()" class="btn btn-secondary" title="Save as Draft"
+                    style="border-color: #f59e0b; color: #f59e0b; flex: 1;">Save Draft</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="addToBatch()" class="btn btn-secondary"
+                        style="border-color: var(--primary); color: var(--primary); flex: 1;">Save to
+                        Batch</button>
+                    <button onclick="showReplicateModal()" class="btn btn-secondary" title="Replicate to Multiple Dates"
+                        style="border-color: #7e22ce; color: #7e22ce; flex: 0 0 auto;">📅+</button>
                 </div>
+                {% if cart.is_edit_mode %}
+                <button onclick="processUnifiedPrint()" class="btn btn-primary"
+                    style="background: #ea580c; border-color: #ea580c; flex: 1;">Update & Print</button>
+                {% else %}
+                <button onclick="processUnifiedPrint()" class="btn btn-primary"
+                    style="background: #22c55e; border-color: #22c55e; flex: 1;">Print Receipt</button>
+                {% endif %}
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <!-- View Batch Modal -->
@@ -1078,6 +1108,30 @@
     `).join('');
 
         document.getElementById('cartTotal').innerText = '₹' + cart.total;
+
+        // Dynamic Update for Edit/Refund Mode
+        if (cart.is_edit_mode && document.getElementById('editModeDiff')) {
+            const original = parseFloat(cart.original_total || 0);
+            const current = parseFloat(cart.total || 0);
+            const diff = current - original;
+
+            const diffContainer = document.getElementById('editModeDiff');
+            if (diff < 0) {
+                // Refund
+                diffContainer.innerHTML = `
+                    <span>Cashier to Refund:</span>
+                    <span>₹${Math.abs(diff)}</span>
+                `;
+                diffContainer.style.color = '#166534'; // Green
+            } else {
+                // To Pay
+                diffContainer.innerHTML = `
+                    <span>Devotee to Pay:</span>
+                    <span>₹${Math.abs(diff)}</span>
+                `;
+                diffContainer.style.color = '#b91c1c'; // Red
+            }
+        }
 
         if (cart.items.length === 0) {
             container.innerHTML = `

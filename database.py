@@ -80,18 +80,16 @@ def init_db():
     if 'logo_path' not in setting_cols:
         c.execute("ALTER TABLE temple_settings ADD COLUMN logo_path TEXT")
 
-    if 'print_template_content' not in setting_cols:
-        c.execute("ALTER TABLE temple_settings ADD COLUMN print_template_content TEXT")
-        # Set default template
-        default_template = """<!DOCTYPE html>
+    # Set default template (Defined here so it's available for updates)
+    default_template = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receipt</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;700;900&display=swap');
 
         body {
             margin: 0;
@@ -99,63 +97,56 @@ def init_db():
             font-family: 'Inter', 'Noto Sans Malayalam', sans-serif;
             background: #fff;
             color: #000;
+            -webkit-font-smoothing: antialiased;
         }
 
         .receipt-container {
-            width: 80mm; /* Standard thermal printer width */
+            width: 80mm;
             margin: 0 auto;
-            padding: 10px;
             box-sizing: border-box;
         }
 
         .slip {
+            width: 80mm;
+            padding: 4mm;
+            box-sizing: border-box;
             page-break-after: always;
-            border-bottom: 2px dashed #000; /* Separator for visualization in browser */
-            padding-bottom: 20px;
-            margin-bottom: 20px;
+            border-bottom: 1.5px dashed #000;
+            margin-bottom: 10px;
         }
 
         .slip:last-child {
-            page-break-after: auto;
             border-bottom: none;
+            margin-bottom: 0;
         }
+
+        /* --- VISUAL HIERARCHY --- */
 
         .header {
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .temple-name-mal {
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 22px;
+            font-weight: 900;
             margin: 0;
+            line-height: 1.1;
         }
 
         .temple-name-eng {
             font-size: 14px;
-            font-weight: 600;
-            margin: 2px 0 0 0;
-            text-transform: uppercase;
-        }
-        
-        .subtitle-mal {
-            font-size: 12px;
-            font-weight: 500;
-            margin: 2px 0 0 0;
-        }
-
-        .subtitle-eng {
-            font-size: 10px;
-            font-weight: 400;
-            margin: 0;
+            font-weight: 700;
+            margin: 4px 0 0 0;
             text-transform: uppercase;
         }
 
-        .meta-info {
+        .meta-section {
             font-size: 12px;
-            margin-bottom: 10px;
+            border-top: 1px solid #000;
             border-bottom: 1px solid #000;
-            padding-bottom: 5px;
+            margin: 8px 0;
+            padding: 5px 0;
         }
 
         .meta-row {
@@ -163,149 +154,155 @@ def init_db():
             justify-content: space-between;
         }
 
-        .bill-details {
-            margin-bottom: 10px;
+        .devotee-highlight {
+            margin: 12px 0;
+            text-align: center;
+            padding: 6px;
+            border: 1px solid #000;
+            border-radius: 4px;
         }
 
-        .devotee-info {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 8px;
+        .devotee-name {
+            font-size: 20px;
+            font-weight: 800;
+            display: block;
         }
 
-        .star-info {
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-
-        th {
-            text-align: left;
-            border-bottom: 1px solid #000;
-            padding: 2px 0;
-        }
-
-        td {
-            padding: 4px 0;
-            vertical-align: top;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .total-row {
-            border-top: 1px solid #000;
+        .star-name {
+            font-size: 18px;
             font-weight: 700;
-            font-size: 14px;
+            display: block;
         }
 
-        .footer {
+        /* --- SINGLE ITEM FOCUS --- */
+        .item-container {
+            margin: 15px 0;
+            padding: 10px 0;
+            border-bottom: 2px solid #000;
+        }
+
+        .item-label {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .item-name {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .item-price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-top: 10px;
+        }
+
+        .item-qty {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .item-amount {
+            font-size: 24px;
+            font-weight: 900;
+        }
+
+        .system-info {
             text-align: center;
             font-size: 10px;
             margin-top: 15px;
+            padding-top: 5px;
+            border-top: 1px dotted #888;
         }
 
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .text-right { text-align: right; }
+
         @media print {
-            body {
-                width: auto;
-                margin: 0;
-            }
-            .receipt-container {
-                width: 100%;
-                padding: 0;
-                margin: 0;
-            }
-            .slip {
-                border-bottom: none; /* Hide visual separator in actual print */
-                margin-bottom: 0;
-                height: auto;
-            }
+            body { width: 80mm; }
+            .receipt-container { width: 80mm; padding: 0; margin: 0; }
+            .slip { border-bottom: none; margin-bottom: 0; }
         }
     </style>
 </head>
 <body>
     <div class="receipt-container">
         {% for slip in slips %}
-        <div class="slip">
-            <div class="header">
-                <h1 class="temple-name-mal">{{ settings.name_mal }}</h1>
-                <h2 class="temple-name-eng">{{ settings.name_eng }}</h2>
-                {% if settings.subtitle_mal %}
-                <h3 class="subtitle-mal">{{ settings.subtitle_mal }}</h3>
-                {% endif %}
-                {% if settings.subtitle_eng %}
-                <h4 class="subtitle-eng">{{ settings.subtitle_eng }}</h4>
-                {% endif %}
-            </div>
-
-            <div class="meta-info">
-                <div class="meta-row">
-                    <span>Bill No: {{ slip.bill_no }}</span>
-                    <span>{{ timestamp }}</span>
+            {% for item in slip.line_items %}
+            <div class="slip">
+                <!-- Header -->
+                <div class="header">
+                    <h1 class="temple-name-mal">{{ settings.name_mal }}</h1>
+                    <h2 class="temple-name-eng">{{ settings.name_eng }}</h2>
                 </div>
-                {% if slip.scheduled_date %}
-                <div class="meta-row" style="margin-top: 4px;">
-                    <span><strong>Vazhipadu Date: {{ slip.scheduled_date }}</strong></span>
-                </div>
-                {% endif %}
-            </div>
 
-            <div class="bill-details">
-                <div class="devotee-info">
-                    {{ slip.devotee_name }}
+                <!-- Metadata -->
+                <div class="meta-section">
+                    <div class="meta-row">
+                        <span>No: <strong>{{ slip.bill_no }}</strong></span>
+                        <span>{{ timestamp }}</span>
+                    </div>
+                    {% if slip.scheduled_date %}
+                    <div class="meta-row" style="margin-top: 2px;">
+                        <span>Date: <strong>{{ slip.scheduled_date }}</strong></span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Devotee -->
+                <div class="devotee-highlight">
+                    <span class="devotee-name">{{ slip.devotee_name }}</span>
                     {% if slip.star %}
-                    <span class="star-info">({{ slip.star }})</span>
+                    <span class="star-name">({{ slip.star }})</span>
                     {% endif %}
                 </div>
-            </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 60%;">Item</th>
-                        <th style="width: 20%;">Qty</th>
-                        <th class="text-right" style="width: 20%;">Amt</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in slip.line_items %}
-                    <tr>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.count }}</td>
-                        <td class="text-right">{{ "%.0f"|format(item.total) }}</td>
-                    </tr>
-                    {% endfor %}
-                    
-                    {% if slip.line_items|length > 1 %}
-                    <tr class="total-row">
-                        <td colspan="2">Total</td>
-                        <td class="text-right">{{ "%.0f"|format(slip.total) }}</td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                <!-- Focused Single Item -->
+                <div class="item-container">
+                    <span class="item-label">Vazhipadu Item</span>
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="item-price-row">
+                        <span class="item-qty">Qty: {{ item.count }}</span>
+                        <span class="item-amount">{{ "%.0f"|format(item.total) }}</span>
+                    </div>
+                </div>
 
-            <div class="footer">
-                {{ settings.receipt_footer }}
+                <!-- System Info -->
+                <div class="system-info">
+                    {% if slip.cashier_name %}User: {{ slip.cashier_name }}{% endif %}
+                    {% if slip.printer_name %} | Term: {{ slip.printer_name }}{% endif %}
+                </div>
+
+                <!-- Footer -->
+                {% if settings.receipt_footer %}
+                <div class="footer-text">
+                    {{ settings.receipt_footer }}
+                </div>
+                {% endif %}
             </div>
-        </div>
+            {% endfor %}
         {% endfor %}
     </div>
-
-    <script>
-        // Auto-print only if loaded with instructions or standalone
-        // window.onload = function() { window.print(); }
-    </script>
 </body>
 </html>"""
+
+    if 'print_template_content' not in setting_cols:
+        c.execute("ALTER TABLE temple_settings ADD COLUMN print_template_content TEXT")
         c.execute("UPDATE temple_settings SET print_template_content = ? WHERE id = 1", (default_template,))
+    
+    # Always update the template on startup to ensure latest version
+    c.execute("UPDATE temple_settings SET print_template_content = ? WHERE id = 1", (default_template,))
 
     # 2. Printers
     c.execute('''
@@ -359,7 +356,10 @@ def init_db():
             star TEXT,
             type TEXT DEFAULT 'vazhipadu',
             status TEXT DEFAULT 'printed',
-            FOREIGN KEY(cashier_id) REFERENCES users(id)
+            remarks TEXT,
+            original_bill_id INTEGER,
+            FOREIGN KEY(cashier_id) REFERENCES users(id),
+            FOREIGN KEY(original_bill_id) REFERENCES bills(id)
         )
     ''') 
 
@@ -372,6 +372,14 @@ def init_db():
     # Migration: Add bill_seq if missing (safety check)
     if 'bill_seq' not in columns:
         c.execute("ALTER TABLE bills ADD COLUMN bill_seq INTEGER")
+
+    # Migration: Add remarks if missing
+    if 'remarks' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN remarks TEXT")
+
+    # Migration: Add original_bill_id if missing
+    if 'original_bill_id' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN original_bill_id INTEGER REFERENCES bills(id)")
 
     # 6. Bill Items
     c.execute('''
