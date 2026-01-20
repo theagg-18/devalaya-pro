@@ -361,7 +361,7 @@ def recall_batch_entry():
     # Check if current cart is empty to avoid overwriting
     current_cart = session.get('cart')
     if current_cart and current_cart.get('items'):
-        return {'status': 'error', 'message': 'Current cart is not empty. Please clear or batch it first.'}
+        return {'status': 'error', 'message': 'An error occurred during checkout.'}
         
     # Pop from batch and set as cart
     entry = batch.pop(idx)
