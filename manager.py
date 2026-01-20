@@ -8,6 +8,7 @@ import time
 import psutil
 
 # Configuration
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_URL = "https://github.com/theagg-18/devalaya-pro"
 UPDATE_ZIP_NAME = "update.zip"
 REQUIREMENTS_FILE = "requirements.txt"
@@ -149,19 +150,20 @@ def update_system():
     print("\n--- UPDATE SYSTEM ---")
     
     # 1. Offline Update
-    if os.path.exists(UPDATE_ZIP_NAME):
+    update_zip_path = os.path.join(BASE_DIR, UPDATE_ZIP_NAME)
+    if os.path.exists(update_zip_path):
         print(f"[!] Found {UPDATE_ZIP_NAME}. Detected Offline Update.")
         choice = input("Do you want to install this update? (y/n): ").lower()
         if choice == 'y':
             print("Extracting update...")
             try:
-                with zipfile.ZipFile(UPDATE_ZIP_NAME, 'r') as zip_ref:
-                    zip_ref.extractall('.')
+                with zipfile.ZipFile(update_zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(BASE_DIR)
                 print("[+] Files extracted successfully.")
                 
                 # Backup/Rename the zip file so it doesn't prompt again
-                backup_name = f"{UPDATE_ZIP_NAME}.bak_{int(time.time())}"
-                os.rename(UPDATE_ZIP_NAME, backup_name)
+                backup_name = os.path.join(BASE_DIR, f"{UPDATE_ZIP_NAME}.bak_{int(time.time())}")
+                os.rename(update_zip_path, backup_name)
                 print(f"[+] Backup created: {backup_name}")
                 
             except Exception as e:
@@ -169,9 +171,12 @@ def update_system():
                 return
     
     # 2. Online Update
-    elif os.path.exists(".git"):
+    # 2. Online Update
+    elif os.path.exists(os.path.join(BASE_DIR, ".git")):
         print("[*] Git repository detected. Checking for online updates...")
         try:
+            # Ensure we are in the repo root
+            os.chdir(BASE_DIR)
             subprocess.run(["git", "pull"], check=True)
             print("[+] Code updated from Git.")
         except subprocess.CalledProcessError:
