@@ -184,8 +184,93 @@ def update_system():
         except FileNotFoundError:
             print("[-] Git command not found.")
     else:
-        print("[-] No update source found (No update.zip and not a git repo).")
-        return
+        # 3. Online Update (Non-Git: Download from GitHub)
+        print("[*] No local update source. Checking GitHub for releases...")
+        try:
+            import urllib.request
+            import json
+            import version  # Import local version module
+
+            api_url = "https://api.github.com/repos/theagg-18/devalaya-pro/releases/latest"
+            headers = {'User-Agent': 'Devalaya-Manager'}
+            
+            req = urllib.request.Request(api_url, headers=headers)
+            with urllib.request.urlopen(req) as response:
+                if response.status != 200:
+                    print(f"[-] Failed to check updates. GitHub API returned {response.status}")
+                    return
+                
+                data = json.loads(response.read().decode('utf-8'))
+                latest_tag = data.get('tag_name', 'v0.0.0')
+                zip_url = data.get('zipball_url')
+                
+                # Simple version compare
+                current_ver = version.__version__
+                print(f"[*] Current: {current_ver}, Latest: {latest_tag}")
+                
+                # Check uniqueness (naive check, assuming strictly increasing tags)
+                if latest_tag == f"v{current_ver}" or latest_tag == current_ver:
+                    print("[+] You are already using the latest version.")
+                    return
+
+                print(f"[!] New version available: {latest_tag}")
+                choice = input("Do you want to download and install this update? (y/n): ").lower()
+                
+                if choice == 'y':
+                    print("Downloading update...")
+                    temp_zip = os.path.join(BASE_DIR, "temp_update.zip")
+                    
+                    # Download
+                    with urllib.request.urlopen(zip_url) as dl_resp, open(temp_zip, 'wb') as f:
+                        shutil.copyfileobj(dl_resp, f)
+                    
+                    print("Extracting update...")
+                    # GitHub zips have a root folder (e.g., devalaya-pro-v1.5.0-xyz/...)
+                    # We need to extract contents of that folder to BASE_DIR
+                    with zipfile.ZipFile(temp_zip, 'r') as zf:
+                        root_folder = zf.namelist()[0].split('/')[0]
+                        
+                        temp_extract_dir = os.path.join(BASE_DIR, "temp_extract")
+                        if os.path.exists(temp_extract_dir):
+                            shutil.rmtree(temp_extract_dir)
+                        os.makedirs(temp_extract_dir)
+                        
+                        zf.extractall(temp_extract_dir)
+                        
+                        # Move contents
+                        source_dir = os.path.join(temp_extract_dir, root_folder)
+                        for item in os.listdir(source_dir):
+                            s = os.path.join(source_dir, item)
+                            d = os.path.join(BASE_DIR, item)
+                            if os.path.exists(d):
+                                if os.path.isdir(d):
+                                    # shutil.copytree requires dest to not exist or dirs_exist_ok in py3.8+
+                                    # We can try to rely on overwrite loop or rmtree
+                                    # Safe fallback: copytree with dirs_exist_ok=True if available
+                                    if sys.version_info >= (3, 8):
+                                        shutil.copytree(s, d, dirs_exist_ok=True)
+                                    else:
+                                        # Manual merge for older python? Unlikely needed but safe:
+                                        # Just remove dest and copy
+                                        shutil.rmtree(d)
+                                        shutil.copytree(s, d)
+                                else:
+                                    os.remove(d)
+                                    shutil.copy2(s, d)
+                            else:
+                                if os.path.isdir(s):
+                                    shutil.copytree(s, d)
+                                else:
+                                    shutil.copy2(s, d)
+                                    
+                    # Cleanup
+                    os.remove(temp_zip)
+                    shutil.rmtree(temp_extract_dir)
+                    print("[+] Update installed successfully.")
+                    
+        except Exception as e:
+            print(f"[-] Online update failed: {e}")
+            return
 
     # 3. Post-Update Tasks
     install_dependencies()
