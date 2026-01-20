@@ -852,8 +852,10 @@ def check_updates():
         repo_api = "https://api.github.com/repos/theagg-18/devalaya-pro/releases/latest"
         tags_api = "https://api.github.com/repos/theagg-18/devalaya-pro/tags"
         
+        headers = {'User-Agent': 'Devalaya-Admin'}
+
         # 1. Try Releases
-        resp = requests.get(repo_api, timeout=5)
+        resp = requests.get(repo_api, headers=headers, timeout=5)
         latest_version = None
         download_url = None
         
@@ -864,7 +866,7 @@ def check_updates():
             
         # 2. Fallback to Tags (if 404 on releases)
         elif resp.status_code == 404:
-            resp_tags = requests.get(tags_api, timeout=5)
+            resp_tags = requests.get(tags_api, headers=headers, timeout=5)
             if resp_tags.status_code == 200:
                 tags = resp_tags.json()
                 if tags:
