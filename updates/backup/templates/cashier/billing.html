@@ -167,7 +167,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                     <div style="display: flex; gap: 0.5rem;">
                         <button onclick="addToBatch()" class="btn btn-secondary"
-                            style="border-color: var(--primary); color: var(--primary); flex: 1;">Add to
+                            style="border-color: var(--primary); color: var(--primary); flex: 1;">Save to
                             Batch</button>
                         <button onclick="showReplicateModal()" class="btn btn-secondary"
                             title="Replicate to Multiple Dates"
@@ -202,7 +202,9 @@
                         bill['devotee_name'] or 'No Name' }}</div>
                     <div style="font-size: 0.85rem; color: #64748b;">
                         {{ star_map.get(bill['star'], bill['star']) }} {% if bill['star'] in star_map %}({{ bill['star']
-                        }}){% endif %} • {{ bill['items']|length }} items
+                        }}){% endif %} • {{ bill['items']|length }} items • <span
+                            style="color: #475569; font-weight: 500;">{{
+                            bill['scheduled_date'].split('-')[::-1]|join('-') }}</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
