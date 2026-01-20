@@ -3,16 +3,33 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.4.2"
+__version__ = "1.5.1"
 __version_info__ = {
     "major": 1,
-    "minor": 4,
-    "patch": 2,
+    "minor": 5,
+    "patch": 1,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.1",
+        "date": "2026-01-21",
+        "changes": [
+            "Critical Fix: Resolved PermissionError during update on Windows (.venv locking)",
+            "Fixed update loop due to version mismatch"
+        ]
+    },
+    {
+        "version": "1.5.0",
+        "date": "2026-01-20",
+        "changes": [
+            "Bill Cancellation and Editing features",
+            "Enhanced History and Billing UI",
+            "Added Cancelled Bill alerts and styling"
+        ]
+    },
     {
         "version": "1.4.2",
         "date": "2026-01-20",
