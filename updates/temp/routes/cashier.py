@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from database import get_db
 from routes.auth import login_required
 from utils.timezone_utils import now_ist, IST, format_ist_datetime, parse_db_timestamp, get_ist_timestamp
+import html
 
 cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
 
@@ -293,7 +294,32 @@ def update_cart():
     session['cart'] = cart
     session.modified = True
     
-    return {'status': 'success', 'cart': cart}
+    # Prepare safe cart for response (XSS Protection)
+    safe_cart = {}
+    safe_cart['mode'] = html.escape(cart.get('mode', ''))
+    safe_cart['devotee_name'] = html.escape(cart.get('devotee_name', ''))
+    safe_cart['star'] = html.escape(cart.get('star', ''))
+    safe_cart['scheduled_date'] = html.escape(cart.get('scheduled_date', ''))
+    safe_cart['total'] = float(cart.get('total', 0))
+    
+    safe_items = []
+    for item in cart.get('items', []):
+        safe_item = item.copy()
+        safe_item['name'] = html.escape(item.get('name', ''))
+        safe_item['type'] = html.escape(item.get('type', ''))
+        # Enforce numeric types
+        try:
+            safe_item['id'] = int(item.get('id', 0))
+            safe_item['amount'] = float(item.get('amount', 0))
+            safe_item['count'] = int(item.get('count', 0))
+            safe_item['total'] = float(item.get('total', 0))
+        except (ValueError, TypeError):
+            continue # Skip malformed items or handle gracefully
+        safe_items.append(safe_item)
+    
+    safe_cart['items'] = safe_items
+
+    return {'status': 'success', 'cart': safe_cart}
 
 @cashier_bp.route('/billing/batch/add', methods=['POST'])
 @login_required
