@@ -7,6 +7,7 @@ import time
 import subprocess
 import requests
 from flask import current_app
+import logging
 
 # Global Maintenance Flag
 MAINTENANCE_MODE = False
@@ -183,8 +184,11 @@ def perform_update(update_source, is_url=True):
             os.execv(sys.executable, [sys.executable] + sys.argv)
             
     except Exception as e:
+        # Log full exception details server-side
+        logging.error("Update failed, initiating rollback.", exc_info=True)
         UPDATE_STATUS = "Rollback Initiated..."
-        LAST_ERROR = str(e)
+        # Store a generic, non-sensitive error summary for clients
+        LAST_ERROR = "Update failed. Rollback has been initiated. Check server logs for details."
         rollback()
 
 def rollback():
@@ -207,7 +211,9 @@ def rollback():
         UPDATE_STATUS = f"Rollback Complete. Error: {LAST_ERROR}"
         MAINTENANCE_MODE = False
     except Exception as e:
-        UPDATE_STATUS = f"CRITICAL: Rollback Failed! {e}"
+        # Log full rollback failure details without exposing them to clients
+        logging.error("CRITICAL: Rollback failed.", exc_info=True)
+        UPDATE_STATUS = "CRITICAL: Rollback Failed! Check server logs for details."
 
 def start_update_thread(source, is_url=True):
     t = threading.Thread(target=perform_update, args=(source, is_url))
