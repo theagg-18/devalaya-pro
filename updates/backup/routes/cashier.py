@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from database import get_db
 from routes.auth import login_required
 from utils.timezone_utils import now_ist, IST, format_ist_datetime, parse_db_timestamp, get_ist_timestamp
+import html
 
 cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
 
@@ -292,8 +293,29 @@ def update_cart():
     cart['total'] = sum(i['total'] for i in cart['items'])
     session['cart'] = cart
     session.modified = True
-    
-    return {'status': 'success', 'cart': cart}
+
+    # Sanitize user-controlled string fields before returning them
+    safe_cart = {
+        'mode': cart.get('mode'),
+        'items': [],
+        'total': cart.get('total', 0),
+        'devotee_name': html.escape(cart.get('devotee_name', ''), quote=True),
+        'star': html.escape(cart.get('star', ''), quote=True),
+        'scheduled_date': html.escape(cart.get('scheduled_date', ''), quote=True),
+    }
+
+    for item in cart.get('items', []):
+        safe_item = {
+            'id': item.get('id'),
+            'name': html.escape(str(item.get('name', '')), quote=True),
+            'amount': item.get('amount'),
+            'count': item.get('count'),
+            'total': item.get('total'),
+            'type': html.escape(str(item.get('type', 'item')), quote=True),
+        }
+        safe_cart['items'].append(safe_item)
+
+    return {'status': 'success', 'cart': safe_cart}
 
 @cashier_bp.route('/billing/batch/add', methods=['POST'])
 @login_required
