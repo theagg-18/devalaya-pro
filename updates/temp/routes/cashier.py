@@ -888,4 +888,4 @@ def reprint_bill(bill_id):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return {'status': 'error', 'message': str(e)}
+        return {'status': 'error', 'message': 'An internal error occurred while reprinting the bill.'}
