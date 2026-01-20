@@ -241,11 +241,15 @@ def server_control():
              if proc:
                 print("Server is already running!")
              else:
-                print("Starting Dev Server...")
+                print("Starting Dev Server (Debug Mode)...")
+                # Prepare Env with DEBUG flag
+                env = os.environ.copy()
+                env["FLASK_DEBUG"] = "true"
+                
                 if platform.system() == 'Windows':
-                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+                     subprocess.Popen([sys.executable, "app.py"], creationflags=subprocess.CREATE_NEW_CONSOLE, env=env)
                 else:
-                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True)
+                     subprocess.Popen([sys.executable, "app.py"], start_new_session=True, env=env)
                 time.sleep(2)
 
         elif choice == '3':
