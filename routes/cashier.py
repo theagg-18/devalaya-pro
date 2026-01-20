@@ -317,6 +317,11 @@ def update_cart():
 
     # Recalculate global total
     cart['total'] = sum(i['total'] for i in cart['items'])
+    # Preserve edit mode metadata
+    cart['original_bill_id'] = cart.get('original_bill_id')
+    cart['original_total'] = cart.get('original_total')
+    cart['is_edit_mode'] = cart.get('is_edit_mode', False)
+    
     session['cart'] = cart
     session.modified = True
     
@@ -327,6 +332,13 @@ def update_cart():
     safe_cart['star'] = html.escape(cart.get('star', ''))
     safe_cart['scheduled_date'] = html.escape(cart.get('scheduled_date', ''))
     safe_cart['total'] = float(cart.get('total', 0))
+    
+    # Edit Mode Metadata
+    if cart.get('is_edit_mode'):
+        safe_cart['is_edit_mode'] = True
+        safe_cart['original_total'] = float(cart.get('original_total', 0))
+        safe_cart['difference'] = safe_cart['total'] - safe_cart['original_total']
+        safe_cart['original_bill_id'] = cart.get('original_bill_id')
     
     safe_items = []
     for item in cart.get('items', []):
@@ -497,14 +509,17 @@ def checkout():
                     status = 'printed' 
                     ist_timestamp = get_ist_timestamp()
 
+                    original_bill_id = bill_data.get('original_bill_id')
+                    remarks = "Edited Bill Correction" if original_bill_id else None
+
                     if draft_id:
                         # REUSE existing Draft - Update it
                         # Optimistically try to set the new bill_no
                         db.execute(
                             '''UPDATE bills SET 
-                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?
+                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?, original_bill_id=?, remarks=?
                                WHERE id=?''', 
-                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, draft_id)
+                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, original_bill_id, remarks, draft_id)
                         )
                         bill_id = draft_id
                         
@@ -518,9 +533,9 @@ def checkout():
                         # Create NEW Bill
                         # We include bill_no here to trigger UNIQUE constraint immediately
                         cur = db.execute(
-                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp)
+                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at, original_bill_id, remarks)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp, original_bill_id, remarks)
                         )
                         bill_id = cur.lastrowid
                     
@@ -694,7 +709,7 @@ def checkout():
             slips_data = [] # List of slip dictionaries
             
             # Helper to create slip data object
-            def create_slip_data(b_no, d_name, d_star, items, scheduled_date=None):
+            def create_slip_data(b_no, d_name, d_star, items, scheduled_date=None, cashier_name=None, printer_name=None):
                 total = sum(i.get('total', 0) for i in items)
                 
                 # Format Scheduled Date
@@ -716,7 +731,9 @@ def checkout():
                     'star': star_disp,
                     'scheduled_date': s_date_str,
                     'line_items': items,
-                    'total': total
+                    'total': total,
+                    'cashier_name': cashier_name,
+                    'printer_name': printer_name
                 }
 
             if group_by == 'devotee':
@@ -729,9 +746,9 @@ def checkout():
                     # Iterate each item for "One Puja = One Slip"
                     for item in bill_data['items']:
                         # Single item slip
-                        slips_data.append(create_slip_data(b_id, dev_name, dev_star, [item], scheduled_date))
+                        slips_data.append(create_slip_data(b_id, dev_name, dev_star, [item], scheduled_date, g.user['username'], printer_name))
 
-            elif group_by == 'puja':
+            if group_by == 'puja':
                 # Consolidate by Item Type Logic (Complex, sticking to simple list for now)
                 # Re-using the same consolidation logic from before?
                 # The previous logic was: One slip per item occurrence but sorted? 
@@ -763,9 +780,34 @@ def checkout():
                         entry['devotee_name'], 
                         entry['star'], 
                         [entry['item']], 
-                        entry['scheduled_date']
+                        entry['scheduled_date'],
+                        g.user['username'],
+                        printer_name
                     ))
             
+            # --- BATCH SUMMARY INJECTION ---
+            if is_batch:
+                total_bills = len(items_to_process)
+                grand_total = sum(b['total'] for b in items_to_process)
+                
+                # Create a fake 'bill' for summary
+                summary_slip = {
+                    'bill_no': 'SUMMARY',
+                    'devotee_name': "BATCH REPORT",
+                    'star': '', # No Star
+                    'scheduled_date': None,
+                    'total': grand_total,
+                    'line_items': [
+                        {
+                            'name': f"Total Bills: {total_bills}",
+                            'count': '',
+                            'total': grand_total
+                        }
+                    ]
+                }
+                slips_data.append(summary_slip)
+            # -------------------------------
+
             # Render Template from DB
             from flask import render_template_string
             
@@ -841,6 +883,9 @@ def reprint_bill(bill_id):
         if not bill_row:
             return {'status': 'error', 'message': 'Bill not found'}
         bill = dict(bill_row)
+        
+        if bill['status'] == 'cancelled':
+            return {'status': 'error', 'message': 'Cannot reprint a Cancelled Bill.'}
             
         # 3. Fetch Items
         items = db.execute('''
@@ -984,3 +1029,113 @@ def reprint_bill(bill_id):
         logging.error(f"Print Bill Action Failed: {e}", exc_info=True)
         traceback.print_exc()
         return {'status': 'error', 'message': 'An error occurred while printing. Check logs.'}
+
+@cashier_bp.route('/billing/cancel/<int:bill_id>', methods=['POST'])
+@login_required
+def cancel_bill(bill_id):
+    reason = request.json.get('reason')
+    if not reason:
+        return {'status': 'error', 'message': 'Cancellation reason is mandatory.'}
+
+    db = get_db()
+    
+    # Check if bill exists and is valid
+    bill = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
+    if not bill:
+        return {'status': 'error', 'message': 'Bill not found.'}
+        
+    if bill['status'] == 'cancelled':
+         return {'status': 'error', 'message': 'Bill is already cancelled.'}
+    
+    # Permission Check (Cashier can only cancel their own? Or Admin only? User request implies Cashier can)
+    # We allow cashiers to cancel for now.
+    
+    try:
+        db.execute('UPDATE bills SET status=?, remarks=? WHERE id=?', ('cancelled', reason, bill_id))
+        db.commit()
+        return {'status': 'success'}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {'status': 'error', 'message': 'Database error during cancellation.'}
+
+@cashier_bp.route('/billing/edit/<int:bill_id>', methods=['POST'])
+@login_required
+def edit_bill(bill_id):
+    reason = request.json.get('reason')
+    if not reason:
+        return {'status': 'error', 'message': 'Reason is mandatory for correction.'}
+
+    db = get_db()
+    
+    # 1. Fetch Bill & Items
+    bill = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
+    if not bill:
+        return {'status': 'error', 'message': 'Bill not found.'}
+        
+    if bill['status'] == 'cancelled':
+         return {'status': 'error', 'message': 'Cannot edit a cancelled bill.'}
+
+    bill_items = db.execute('''
+        SELECT bi.*, pm.name, pm.type
+        FROM bill_items bi 
+        JOIN puja_master pm ON bi.puja_id = pm.id 
+        WHERE bi.bill_id = ?
+    ''', (bill['id'],)).fetchall()
+    
+    try:
+        # 2. Cancel Old Bill
+        cancel_remarks = f"Corrected/Edited: {reason}"
+        db.execute('UPDATE bills SET status=?, remarks=? WHERE id=?', ('cancelled', cancel_remarks, bill_id))
+        
+        # 3. Populate Cart
+        cart_items = []
+        for item in bill_items:
+            cart_items.append({
+                'id': item['puja_id'],
+                'name': item['name'],
+                'amount': item['price_snapshot'], # Use snapshot price or current price? Snapshot safer for refunds.
+                'count': item['count'],
+                'total': item['total'],
+                'type': item['type']
+            })
+            
+        # Create Cart Object
+        import datetime
+        today = datetime.date.today().isoformat()
+        
+        # Determine Schedule Date (use original if present, else today)
+        s_date = bill['scheduled_date']
+        if s_date:
+            try:
+                if isinstance(s_date, str):
+                    s_date = s_date # Keep string YYYY-MM-DD
+                else: 
+                    s_date = s_date.isoformat()
+            except:
+                s_date = today
+        else:
+            s_date = today
+
+        new_cart = {
+            'mode': bill['type'], # Restore original mode
+            'items': cart_items,
+            'total': bill['total_amount'],
+            'devotee_name': html.escape(bill['devotee_name'] or ''),
+            'star': html.escape(bill['star'] or ''),
+            'scheduled_date': s_date,
+            'original_bill_id': bill['id'],      # Track lineage
+            'original_total': bill['total_amount'], # For refund calc
+            'is_edit_mode': True
+        }
+        
+        session['cart'] = new_cart
+        session.modified = True
+        
+        db.commit()
+        return {'status': 'success', 'redirect': url_for('cashier.start_billing', mode='unified')} # Force unified or original mode? Unified is safe.
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {'status': 'error', 'message': 'Error setting up edit session.'}
