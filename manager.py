@@ -8,7 +8,7 @@ import time
 import psutil
 
 # Configuration
-REPO_URL = "https://github.com/your-username/devalaya-billing.git"  # Update this if you have a public repo
+REPO_URL = "https://github.com/theagg-18/devalaya-pro"
 UPDATE_ZIP_NAME = "update.zip"
 REQUIREMENTS_FILE = "requirements.txt"
 DB_MIGRATION_PATTERN = "migrate_*.py"
