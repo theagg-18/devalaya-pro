@@ -3,16 +3,23 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.2"
+__version__ = "1.5.3"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 2,
+    "patch": 3,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.3",
+        "date": "2026-01-21",
+        "changes": [
+            "Hotfix: Resolved PermissionError on logs/error.log during update"
+        ]
+    },
     {
         "version": "1.5.2",
         "date": "2026-01-21",

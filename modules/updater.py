@@ -18,7 +18,7 @@ LAST_ERROR = None
 BASE_DIR = os.getcwd()
 BACKUP_DIR = os.path.join(BASE_DIR, 'updates', 'backup')
 TEMP_DIR = os.path.join(BASE_DIR, 'updates', 'temp')
-EXCLUDE_DIRS = {'.git', '.gemini', '__pycache__', 'backups', 'updates', 'venv', 'env', '.venv'}
+EXCLUDE_DIRS = {'.git', '.gemini', '__pycache__', 'backups', 'updates', 'venv', 'env', '.venv', 'logs'}
 EXCLUDE_FILES = {'temple.db', '.env', 'debug_checkout.log'}
 
 def set_maintenance_mode(active):
