@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from database import get_db
 from routes.auth import login_required
 from utils.timezone_utils import now_ist, IST, format_ist_datetime, parse_db_timestamp, get_ist_timestamp
+import html
 
 cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
 
@@ -257,16 +258,23 @@ def update_cart():
         # Preserve details if changing modes? No, clear mostly.
         import datetime
         today = datetime.date.today().isoformat()
-        cart = {'mode': data['mode'], 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': today}
+        cart = {
+            'mode': html.escape(data.get('mode', '')),
+            'items': [],
+            'total': 0,
+            'devotee_name': '',
+            'star': '',
+            'scheduled_date': today
+        }
         
     elif data['action'] == 'set_details':
-        cart['devotee_name'] = data.get('name', '')
-        cart['star'] = data.get('star', '')
-        cart['scheduled_date'] = data.get('scheduled_date', '')
+        cart['devotee_name'] = html.escape(data.get('name', ''))
+        cart['star'] = html.escape(data.get('star', ''))
+        cart['scheduled_date'] = html.escape(data.get('scheduled_date', ''))
         
     elif data['action'] == 'add':
         item_id = int(data['id'])
-        name = data['name']
+        name = html.escape(data.get('name', ''))
         amount = float(data['amount'])
         
         # Check if item exists
@@ -279,8 +287,12 @@ def update_cart():
                 break
         if not found:
             cart['items'].append({
-                'id': item_id, 'name': name, 'amount': amount, 'count': 1, 'total': amount,
-                'type': data.get('type', 'item') # Default to item if not provided
+                'id': item_id,
+                'name': name,
+                'amount': amount,
+                'count': 1,
+                'total': amount,
+                'type': html.escape(data.get('type', 'item'))  # Default to item if not provided
             })
             
     elif data['action'] == 'remove':
