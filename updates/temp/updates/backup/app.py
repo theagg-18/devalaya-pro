@@ -11,25 +11,6 @@ import os
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Configure Logging
-import logging
-from logging.handlers import RotatingFileHandler
-
-if not app.debug:
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
-    file_handler = RotatingFileHandler('logs/error.log', maxBytes=10240, backupCount=10)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-    file_handler.setLevel(logging.ERROR)
-    app.logger.addHandler(file_handler)
-
-    app.logger.setLevel(logging.INFO)
-    app.logger.info('Devalaya Billing System startup')
-else:
-    logging.basicConfig(level=logging.INFO)
-
-
 app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(cashier_bp)
@@ -48,25 +29,7 @@ def check_maintenance():
            request.path.startswith('/admin/updates/status') or \
            request.path == '/health':
             return None
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta http-equiv="refresh" content="2">
-            <title>System Updating</title>
-            <style>
-                body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc; color: #334155; }
-                .loader { border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-        </head>
-        <body>
-            <div class="loader"></div>
-            <h2>System is updating...</h2>
-            <p>Please wait. This page will reload automatically.</p>
-        </body>
-        </html>
-        """, 503
+        return "System is updating... Please wait.", 503
 
 @app.template_filter('from_json')
 def from_json_filter(value):
@@ -114,9 +77,8 @@ def inject_settings():
                     
                 theme_css = get_theme_css(theme_name, custom_colors)
             except Exception as e:
-                import logging
-                logging.error(f"ERROR generating theme CSS: {e}")
-                # traceback.print_exc() # Logging handles this if we want, or remove
+                print(f"ERROR generating theme CSS: {e}")
+                traceback.print_exc()
                 theme_css = get_theme_css('kerala')  # Fallback to default
             
             return {
@@ -129,9 +91,8 @@ def inject_settings():
                 'theme_css': theme_css
             }
         except Exception as e:
-            import logging
-            logging.error(f"ERROR in context processor: {e}")
-            # traceback.print_exc()
+            print(f"ERROR in context processor: {e}")
+            traceback.print_exc()
             return {
                 'temple_settings': None,
                 'now_year': datetime.datetime.now().year,
@@ -172,8 +133,5 @@ def dashboard():
     return redirect(url_for('auth.login'))
 
 if __name__ == '__main__':
-    # Security: Disable debug mode in production
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    debug_mode = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
     app.run(host='0.0.0.0', port=5000, debug=debug_mode)
-
-# Trigger Reload v1.5.1

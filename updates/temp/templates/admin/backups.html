@@ -1,0 +1,129 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="card">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h2>Database Manager</h2>
+
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <form action="{{ url_for('admin.upload_backup') }}" method="post" enctype="multipart/form-data"
+                style="display: flex; gap: 0.5rem; align-items: center; background: #f1f5f9; padding: 0.5rem; border-radius: 6px;">
+                <input type="file" name="backup_file" accept=".db" required
+                    style="font-size: 0.9rem; max-width: 200px;">
+                <button type="submit" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.9rem;">
+                    Upload
+                </button>
+            </form>
+
+            <form action="{{ url_for('admin.trigger_backup') }}" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-primary">
+                    Create New Backup
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- Factory Reset Section -->
+<div
+    style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #fee2e2; background: #fef2f2; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h3 style="color: #991b1b; margin-bottom: 0.5rem; font-size: 1.1rem;">Danger Zone: Factory Reset</h3>
+        <p style="color: #7f1d1d; font-size: 0.9rem; margin: 0;">
+            This will erase <strong>ALL DATA</strong> including bills, users, and settings. A backup will be created
+            automatically before resetting.
+        </p>
+    </div>
+
+    <button onclick="confirmFactoryReset()" class="btn btn-danger"
+        style="background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer;">
+        Reset All Data
+    </button>
+
+    <form id="resetForm" action="{{ url_for('admin.reset_database') }}" method="post" style="display: none;"></form>
+</div>
+
+<script>
+    function confirmFactoryReset() {
+        // First Warning
+        if (!confirm("CRITICAL WARNING: You are about to ERASE ALL DATA from the system.\n\nThis action cannot be undone (though a backup will be attempted).\n\nAre you absolutely sure you want to proceed?")) {
+            return;
+        }
+
+        // Second Warning with Validation
+        const input = prompt("To confirm, please type 'RESET' in the box below:");
+        if (input === "RESET") {
+            document.getElementById('resetForm').submit();
+        } else if (input !== null) {
+            alert("Confirmation failed. Database reset cancelled.");
+        }
+    }
+</script>
+
+<div
+    style="margin-bottom: 2rem; background: #eff6ff; color: #1e40af; padding: 1rem; border-radius: 8px; border: 1px solid #dbeafe;">
+    <p><strong>Note:</strong> Backups are stored locally in the <code>backups/</code> directory. Regular off-site
+        backups are recommended.</p>
+</div>
+
+{% if backups %}
+<table style="width: 100%; border-collapse: collapse;">
+    <thead>
+        <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
+            <th style="padding: 12px;">Filename</th>
+            <th style="padding: 12px;">Created At</th>
+            <th style="padding: 12px;">Size</th>
+            <th style="padding: 12px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for backup in backups %}
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px; font-family: monospace; color: #475569;">
+                {{ backup.name }}
+            </td>
+            <td style="padding: 12px;">
+                {{ backup.created_at }}
+            </td>
+            <td style="padding: 12px;">
+                {{ backup.size }}
+            </td>
+            <td style="padding: 12px; display: flex; gap: 8px;">
+                <!-- Download -->
+                <a href="{{ url_for('admin.download_backup', filename=backup.name) }}"
+                    style="padding: 4px 8px; background: #eff6ff; color: #2563eb; border-radius: 4px; text-decoration: none; font-size: 0.9rem;">
+                    Download
+                </a>
+
+                <!-- Restore -->
+                <form action="{{ url_for('admin.restore_backup', filename=backup.name) }}" method="post"
+                    onsubmit="return confirm('WARNING: This will replace the current database with the selected backup. Current data will be lost unless backed up. Continue?');"
+                    style="display: inline-block;">
+                    <button type="submit"
+                        style="padding: 4px 8px; background: #fffbeb; color: #d97706; border: 1px solid #fcd34d; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        Restore
+                    </button>
+                </form>
+
+                <!-- Delete -->
+                <form action="{{ url_for('admin.delete_backup', filename=backup.name) }}" method="post"
+                    onsubmit="return confirm('Delete this backup?');" style="display: inline-block;">
+                    <button type="submit"
+                        style="padding: 4px 8px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        Delete
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div style="text-align: center; padding: 3rem; color: #64748b; background: #f8fafc; border-radius: 8px;">
+    <p>No backups found. Create one to get started.</p>
+</div>
+{% endif %}
+</div>
+{% endblock %}

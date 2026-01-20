@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 4rem auto;">
+    <div class="card">
+        <div class="text-center" style="margin-bottom: 2rem;">
+            <img src="{{ url_for('static', filename=temple_settings.logo_path) if temple_settings and temple_settings.logo_path else url_for('static', filename='logo.jpg') }}"
+                alt="Temple Logo"
+                style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary);">
+            <h2 style="margin-top: 1rem;">Login</h2>
+        </div>
+        <form method="post">
+            <div class="form-group">
+                <label for="username">User ID / Name</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="pin">PIN</label>
+                <input type="password" id="pin" name="pin" required>
+            </div>
+
+            <div class="form-group">
+                <label for="captcha">Verify: <strong>{{ captcha_q }} = ?</strong></label>
+                <input type="number" id="captcha" name="captcha_answer" placeholder="Enter result" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary"
+                style="width: 100%; margin-top: 1rem; padding: 12px;">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

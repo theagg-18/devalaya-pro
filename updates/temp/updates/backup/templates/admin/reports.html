@@ -1,0 +1,89 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="card">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h2>Reports & Audit</h2>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+            <form method="get" style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search Name/Bill..."
+                    style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                <input type="date" name="date" value="{{ date_filter }}" style="width: auto;">
+                <button type="submit" class="btn btn-primary">Search</button>
+                {% if search_query or date_filter %}
+                <a href="{{ url_for('admin.reports') }}" class="btn btn-secondary">Reset</a>
+                {% endif %}
+            </form>
+            <a href="{{ url_for('admin.export_reports', date=date_filter) }}" class="btn btn-secondary">Export CSV</a>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <div
+            style="padding: 1rem; background: #e0e7ff; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: #4338ca; margin-bottom: 4px;">Revenue listed</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #3730a3;">₹{{ "%.2f"|format(total_amount) }}</div>
+        </div>
+        <div
+            style="padding: 1rem; background: #dcfce7; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: #15803d; margin-bottom: 4px;">Bill Count</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #14532d;">{{ count }}</div>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
+                    <th style="padding: 12px;">Bill Info</th>
+                    <th style="padding: 12px;">Cashier</th>
+                    <th style="padding: 12px;">Devotee & Items</th>
+                    <th style="padding: 12px; text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                <tr style="border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+                    <td style="padding: 12px;">
+                        <div style="font-family: monospace; font-weight: 600;">#{{ bill.bill_no or 'Pending' }}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">{{ bill.created_at }}</div>
+                    </td>
+                    <td style="padding: 12px;">
+                        <span class="badge-cashier">{{ bill.cashier_name }}</span>
+                    </td>
+                    <td style="padding: 12px;">
+                        <div style="font-weight: 600;">{{ bill.devotee_name or 'N/A' }}</div>
+                        {% if bill.star %}
+                        <div style="font-size: 0.85rem; color: #64748b;">
+                            Star: {{ star_map.get(bill.star, bill.star) }} {% if bill.star in star_map %}({{ bill.star
+                            }}){% endif %}
+                        </div>
+                        {% endif %}
+                        {% if bill.scheduled_date %}<div
+                            style="font-size: 0.85rem; color: var(--primary); font-weight: 500;">Vazhipadu Date: {{
+                            bill.scheduled_date }}</div>{% endif %}
+
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0;">
+                            {% for item in bill.line_items %}
+                            <div
+                                style="font-size: 0.8rem; display: flex; justify-content: space-between; color: #475569;">
+                                <span>• {{ item.name }} {% if item.count > 1 %}(x{{ item.count }}){% endif %}</span>
+                                <span>₹{{ "%.2f"|format(item.total) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td style="padding: 12px; text-align: right; font-weight: 700;">₹{{ "%.2f"|format(bill.total_amount)
+                        }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center" style="padding: 3rem;">No transactions matched your search.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1270 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="billing-container"
+    style="display: grid; grid-template-columns: 1fr 450px; gap: 2rem; height: calc(100vh - 90px);">
+
+    <!-- Left Panel: Item Selection -->
+    <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding: 0;">
+        <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <h3 style="margin: 0; white-space: nowrap;">Select Item (തിരഞ്ഞെടുക്കുക)</h3>
+                <div
+                    style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                    <div class="filter-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-filter active" onclick="filterCategory('all')">All</button>
+                        <button class="btn-filter" onclick="filterCategory('puja')">Vazhipadu</button>
+                        <button class="btn-filter" onclick="filterCategory('item')">Donation</button>
+                    </div>
+                    <input type="text" id="searchBox" placeholder="Search (തിരയുക)..."
+                        style="width: 100%; max-width: 200px; padding: 6px 12px; font-size: 0.9rem; min-width: 150px;"
+                        onkeyup="filterItems()">
+                </div>
+            </div>
+        </div>
+
+        <div class="item-grid"
+            style="padding: 1rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; align-content: start;">
+            {% for item in items %}
+            <button onclick="handleAddToCart(this)" class="item-btn" data-search="{{ item.name|lower }}"
+                data-type="{{ item.type }}" data-id="{{ item.id }}" data-name="{{ item.name }}"
+                data-amount="{{ item.amount }}">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-price">₹{{ "%.0f"|format(item.amount) }}</div>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right Panel: Cart & Details -->
+    <div class="card"
+        style="display: flex; flex-direction: column; padding: 0; border: 2px solid var(--primary); position: relative; height: 100%; overflow: hidden;">
+
+        <!-- Batch Indicator -->
+        <div id="batchIndicator"
+            style="background: #1e293b; color: white; padding: 8px 16px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                {% set ns = namespace(total=0) %}
+                {% for b in batch %}
+                {% set ns.total = ns.total + b['total'] %}
+                {% endfor %}
+                <span>Batch: <strong id="batchCount">{{ batch|length }}</strong> bills <span
+                        style="color: #94a3b8;">|</span> <strong>₹{{ "%.0f"|format(ns.total) }}</strong></span>
+                {% if batch|length > 0 %}
+                <button onclick="showBatchModal()" title="View/Edit Batch"
+                    style="background: #3b82f6; border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px;">
+                    👁️
+                </button>
+                {% endif %}
+            </div>
+
+            {% if batch|length > 0 %}
+            <button onclick="showPrintDialog()"
+                style="background: #22c55e; border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">PRINT
+                ALL</button>
+            {% endif %}
+        </div>
+
+        <!-- Browser Drafts Section (Rendered via JS) -->
+        <div id="draftsSection"
+            style="display: none; padding: 1rem; background: #fffbeb; border-bottom: 1px solid #fde68a;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span
+                    style="font-size: 0.75rem; color: #92400e; font-weight: 700; text-transform: uppercase; margin: 0;">Pending
+                    Drafts</span>
+                <button onclick="clearAllDrafts()"
+                    style="background: none; border: none; color: #ef4444; font-size: 0.7rem; font-weight: 600; cursor: pointer;">Clear
+                    All</button>
+            </div>
+            <div id="draftsList" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem;">
+                <!-- Rendered via JS -->
+            </div>
+        </div>
+
+        <!-- Devotee Details Form -->
+        <div style="padding: 0.75rem; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="devName" style="font-size: 0.85rem;">ഭക്തന്റെ പേര്</label>
+                    <input type="text" id="devName" value="{{ cart.devotee_name }}" onblur="updateDetails()"
+                        placeholder="Name" style="font-size: 0.9rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="devStar" style="font-size: 0.85rem;">Star (നാൾ)</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="devStar" value="{{ cart.star }}" onblur="setTimeout(updateDetails, 200)"
+                            onfocus="showStars()" oninput="filterStars()" placeholder="Star" autocomplete="off"
+                            style="font-size: 0.9rem;">
+                        <div id="starResults" class="autocomplete-results"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="scheduledDate" style="font-size: 0.85rem;">Vazhipadu Date</label>
+                <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}" onchange="updateDetails()"
+                    style="font-size: 0.9rem; padding: 6px;">
+            </div>
+        </div>
+
+        <!-- Cart Items -->
+        <div id="cartItems"
+            style="flex: 1; overflow-y: auto; padding: 1rem; min-height: 0; display: flex; flex-direction: column;">
+            <!-- Rendered via JS -->
+            {% for item in cart['items'] %}
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <div class="cart-item-title">{{ item.name }}</div>
+                    <div class="cart-item-details">
+                        <div class="qty-control">
+                            <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', -1)"
+                                class="btn-qty minus" title="Decrease">
+                                −
+                            </button>
+                            <span class="qty-display">{{ item.count }}</span>
+                            <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', 1)"
+                                class="btn-qty plus" title="Increase">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="cart-item-actions">
+                    <div class="cart-item-price">₹{{ "%.0f"|format(item.total) }}</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">(₹{{ "%.0f"|format(item.amount) }}
+                        ea)</div>
+                    <button onclick="handleRemoveFromCart(this)" data-id="{{ item.id }}" class="btn-remove"
+                        title="Remove" style="margin-top: 4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Totals & Actions -->
+        <div class="billing-totals-section" style="padding: 1rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+            <div
+                style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.25rem; font-weight: 700;">
+                <span>Total (ആകെ)</span>
+                <span id="cartTotal">₹{{ "%.0f"|format(cart.total|default(0)) }}</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <button onclick="clearCart()" class="btn btn-secondary"
+                        style="border-color: #ef4444; color: #ef4444; flex: 1;">Clear</button>
+                    <button onclick="saveDraft()" class="btn btn-secondary" title="Save as Draft"
+                        style="border-color: #f59e0b; color: #f59e0b; flex: 1;">Save Draft</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="addToBatch()" class="btn btn-secondary"
+                            style="border-color: var(--primary); color: var(--primary); flex: 1;">Save to
+                            Batch</button>
+                        <button onclick="showReplicateModal()" class="btn btn-secondary"
+                            title="Replicate to Multiple Dates"
+                            style="border-color: #7e22ce; color: #7e22ce; flex: 0 0 auto;">📅+</button>
+                    </div>
+                    <button onclick="processUnifiedPrint()" class="btn btn-primary"
+                        style="background: #22c55e; border-color: #22c55e; flex: 1;">Print Receipt</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Batch Modal -->
+<div id="batchModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+    <div class="card"
+        style="width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; margin: 0;">
+        <div
+            style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.25rem;">Current Batch ({{ batch|length }})</h3>
+            <button onclick="document.getElementById('batchModal').style.display='none'"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+
+        <div style="padding: 1rem; overflow-y: auto; flex: 1;">
+            {% for bill in batch %}
+            <div
+                style="padding: 0.75rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                <div style="min-width: 0;">
+                    <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
+                        bill['devotee_name'] or 'No Name' }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">
+                        {{ star_map.get(bill['star'], bill['star']) }} {% if bill['star'] in star_map %}({{ bill['star']
+                        }}){% endif %} • {{ bill['items']|length }} items • <span
+                            style="color: #475569; font-weight: 500;">{{
+                            bill['scheduled_date'].split('-')[::-1]|join('-') }}</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div style="font-weight: 600;">₹{{ "%.0f"|format(bill.total) }}</div>
+                    <button onclick="handleRecallBatchItem(this)" data-index="{{ loop.index0 }}" title="Edit"
+                        style="color: #3b82f6; background: #eff6ff; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">✏️</button>
+                    <button onclick="handleDeleteBatchItem(this)" data-index="{{ loop.index0 }}" title="Remove"
+                        style="color: #ef4444; background: #fef2f2; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🗑️</button>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-center text-muted" style="padding: 2rem;">Batch is empty.</p>
+            {% endfor %}
+        </div>
+
+        <div
+            style="padding: 1rem; border-top: 1px solid #e2e8f0; text-align: right; background: #f8fafc; border-radius: 0 0 12px 12px;">
+            <button onclick="document.getElementById('batchModal').style.display='none'"
+                class="btn btn-secondary">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Print Dialog Modal -->
+<div id="printDialog"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem; overflow-y: auto;">
+    <div class="card"
+        style="width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; padding: 1.5rem; margin: auto;">
+        <h3 class="mb-4" style="font-size: 1.25rem;">Print Options</h3>
+        <p class="mb-4">Select grouping for this batch:</p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
+            <label
+                style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                <input type="radio" name="printGroup" value="puja" checked>
+                <div style="min-width: 0;">
+                    <strong>Group by Vazhipadu (Default)</strong>
+                    <div class="text-muted" style="font-size: 0.8rem; white-space: normal;">Sorted by Item used for
+                        Sanctum</div>
+                </div>
+            </label>
+
+            <label
+                style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                <input type="radio" name="printGroup" value="devotee">
+                <div style="min-width: 0;">
+                    <strong>Group by Devotee</strong>
+                    <div class="text-muted" style="font-size: 0.8rem; white-space: normal;">Sequential receipts per
+                        person</div>
+                </div>
+            </label>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button onclick="document.getElementById('printDialog').style.display='none'"
+                class="btn btn-secondary">Cancel</button>
+            <button onclick="processBatchPrint()" class="btn btn-primary">PRINT ALL</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .item-btn {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.1s;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100px;
+    }
+
+    .item-btn:hover {
+        border-color: var(--primary);
+        background: #eff6ff;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .item-btn:active {
+        transform: translateY(0);
+    }
+
+    .item-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+        color: var(--text-main);
+    }
+
+    .item-price {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .cart-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: box-shadow 0.2s;
+    }
+
+    .cart-item:hover {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-color: #cbd5e1;
+    }
+
+    .cart-item-info {
+        flex: 1;
+    }
+
+    .cart-item-title {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+
+    .cart-item-details {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .cart-item-actions {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
+
+    .cart-item-price {
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .btn-remove {
+        background: #fee2e2;
+        color: #ef4444;
+        border: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-remove:hover {
+        background: #fecaca;
+    }
+
+    /* Qty Controls */
+    .qty-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        background: #f1f5f9;
+        padding: 2px;
+        border-radius: 6px;
+        width: fit-content;
+    }
+
+    .btn-qty {
+        background: white;
+        border: 1px solid #cbd5e1;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        font-weight: 600;
+        color: var(--text-main);
+        transition: all 0.1s;
+    }
+
+    .btn-qty:hover {
+        background: white;
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .btn-qty.minus {
+        color: #ef4444;
+    }
+
+    .btn-qty.plus {
+        color: #22c55e;
+    }
+
+    .qty-display {
+        font-weight: 600;
+        font-size: 0.9rem;
+        min-width: 20px;
+        text-align: center;
+        color: var(--text-main);
+    }
+
+    /* Filter Controls */
+    .btn-filter {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .btn-filter.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    /* Mobile Sticky Footer */
+    @media (max-width: 768px) {
+        .billing-totals-section {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            border-top: 2px solid #e2e8f0;
+            z-index: 50;
+            padding: 1rem !important;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    }
+</style>
+
+<!-- Replicate Modal -->
+<div id="replicateModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+    <div class="card"
+        style="width: 100%; max-width: 400px; padding: 1.5rem; margin: auto; display: flex; flex-direction: column; gap: 1rem;">
+        <h3 style="margin: 0; font-size: 1.25rem;">Replicate to Dates</h3>
+        <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Select dates to create copies of this bill.</p>
+
+        <div style="display: flex; gap: 0.5rem;">
+            <input type="date" id="repDateInput"
+                style="flex: 1; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+            <button onclick="addRepDate()" class="btn btn-secondary">Add</button>
+        </div>
+
+        <div id="repDateList"
+            style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 150px; overflow-y: auto; padding: 0.5rem; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <!-- Chips go here -->
+            <span class="text-muted" style="font-size: 0.8rem; padding: 1rem; width: 100%; text-align: center;">No dates
+                selected</span>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem;">
+            <button onclick="closeReplicateModal()" class="btn btn-secondary">Cancel</button>
+            <button onclick="processReplicate()" class="btn btn-primary"
+                style="background: #7e22ce; border-color: #7e22ce;">Replicate & Add</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .date-chip {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .date-chip button {
+        background: none;
+        border: none;
+        color: #ef4444;
+        font-weight: bold;
+        cursor: pointer;
+        padding: 0;
+        font-size: 14px;
+        line-height: 1;
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script id="data-stars" type="application/json">{{ stars | tojson | safe }}</script>
+<script id="data-cart" type="application/json">{{ cart | tojson | safe }}</script>
+
+<script>
+    const ALL_STARS = JSON.parse(document.getElementById('data-stars').textContent);
+    const MODE = '{{ mode }}';
+    let lastPrintContent = ""; // For Reprint Logic
+
+    function printContentInIframe(content) {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(content);
+        doc.close();
+
+        iframe.contentWindow.focus();
+        setTimeout(() => {
+            iframe.contentWindow.print();
+            // Remove iframe after printing to save memory? 
+            // Better keep it until page reload or remove it now.
+            // document.body.removeChild(iframe); 
+            // Removing it might break print dialog flow in some browsers if done too early.
+        }, 500);
+    }
+
+    function reprintLast() {
+        if (lastPrintContent) {
+            printContentInIframe(lastPrintContent);
+        } else {
+            alert("Nothing to reprint.");
+        }
+    }
+
+    let currentCategory = 'all';
+
+    function filterCategory(cat) {
+        currentCategory = cat;
+        // Update active class
+        document.querySelectorAll('.btn-filter').forEach(b => {
+            b.classList.remove('active');
+            if (b.innerText.toLowerCase() === cat || (cat === 'all' && b.innerText === 'All') || (cat === 'puja' && b.innerText === 'Vazhipadu') || (cat === 'item' && b.innerText === 'Donation')) {
+                b.classList.add('active');
+            }
+        });
+        filterItems();
+    }
+
+    function filterItems() {
+        const query = document.getElementById('searchBox').value.toLowerCase();
+        document.querySelectorAll('.item-btn').forEach(btn => {
+            const name = btn.dataset.search;
+            const type = btn.dataset.type;
+            const matchesQuery = name.includes(query);
+            const matchesType = currentCategory === 'all' || type === currentCategory;
+            btn.style.display = (matchesQuery && matchesType) ? 'flex' : 'none';
+        });
+    }
+
+    function hasVazhipaduItems() {
+        // We need to check cart items. Since we don't have full object in JS memory always synced perfectly with types
+        // We can check the DOM or rely on the serverCart object if we keep it updated.
+        // Let's rely on server cart if possible, but for responsive UI let's check DOM or use a reliable way.
+        // Best way: check if any item in cart has type='puja'.
+        // BUT, cart items in DOM don't have type data.
+        // FIX: Let's assume user must enter name if they add a puja. 
+        // We can pass 'type' in renderCart function.
+        // For now, let's implement a safe check: if any item count > 0.
+        // Wait, the requirement is specific: Mandatory ONLY if Vazhipadu items exist.
+        // We need to know the type of items in the cart.
+        // I will add type to the cart item rendering or rely on a helper.
+        // Let's iterate `SERVER_DATA.cart.items` if available? No, we use `renderCart`.
+        // I'll stick to a simpler approach: Unify requires Name always? No, user said "Donation optional".
+        // I will add `data-type` to cart items.
+        // Actually, just fetching the cart from server response `res.cart` gives us items. 
+        // We need to ensure server sends `type` in cart items.
+        // `update_cart` in python appends `type`? No, currently it constructs dict from params.
+        // I should update `addToCart` to pass type or fetch it.
+        // Better: Pass `type` in `addToCart` to server, store in session cart.
+        return true; // Placeholder, will fix in addToCart
+    }
+
+    function handleAddToCart(btn) {
+        addToCart(btn.dataset.id, btn.dataset.name, btn.dataset.amount, btn.dataset.type);
+    }
+
+    function handleRemoveFromCart(btn) {
+        removeFromCart(btn.dataset.id);
+    }
+
+    function handleRecallBatchItem(btn) {
+        recallBatchItem(parseInt(btn.dataset.index));
+    }
+
+    function handleDeleteBatchItem(btn) {
+        deleteBatchItem(parseInt(btn.dataset.index));
+    }
+
+    async function api(url, data) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return await res.json();
+    }
+
+    async function addToCart(id, name, amount, type) {
+        // Basic validation: if Vazhipadu mode, name must be filled before adding items? 
+        // Usually better to let them add items first, but name is crucial for the "Entry".
+        // Requirement "Enter name & star once" -> implies before Items.
+        // I'll relax validation for adding to cart, but enforce for "Add to Batch".
+
+        const res = await api('/cashier/billing/cart/update', {
+            action: 'add', id, name, amount, type
+        });
+        renderCart(res.cart);
+
+        // Auto-scroll to bottom to show the newly added item
+        setTimeout(() => {
+            const container = document.getElementById('cartItems');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }, 50);
+    }
+
+    async function removeFromCart(id) {
+        const res = await api('/cashier/billing/cart/update', {
+            action: 'remove', id
+        });
+        renderCart(res.cart);
+    }
+
+    async function updateDetails() {
+        // if (MODE !== 'vazhipadu') return; // Unified mode needs this
+        const name = document.getElementById('devName').value;
+        const star = document.getElementById('devStar').value;
+        const scheduled_date = document.getElementById('scheduledDate').value;
+        await api('/cashier/billing/cart/update', {
+            action: 'set_details', name, star, scheduled_date
+        });
+    }
+
+    async function clearCart() {
+        const res = await api('/cashier/billing/cart/update', {
+            action: 'init', mode: MODE
+        });
+        renderCart(res.cart);
+        if (MODE === 'vazhipadu') {
+            document.getElementById('devName').value = '';
+            document.getElementById('devStar').value = '';
+            document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
+        }
+    }
+
+    function validateCartForVazhipadu(cartItems) {
+        if (!cartItems || cartItems.length === 0) return { valid: false, msg: "Cart is empty" };
+
+        const hasVazhipadu = cartItems.some(item => item.type === 'puja');
+        if (hasVazhipadu) {
+            const name = document.getElementById('devName').value.trim();
+            const star = document.getElementById('devStar').value.trim();
+            if (!name || !star) return { valid: false, msg: "Devotee Name & Star are REQUIRED for Vazhipadu items." };
+        }
+        return { valid: true };
+    }
+
+    async function addToBatch() {
+        // Validation
+        if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
+            alert("Cart is empty.");
+            return;
+        }
+
+        const validation = validateCartForVazhipadu(CURRENT_CART.items);
+        if (!validation.valid) {
+            alert(validation.msg);
+            return;
+        }
+
+        const btn = document.querySelector('button[onclick="addToBatch()"]');
+        btn.disabled = true;
+
+        const res = await api('/cashier/billing/batch/add', {});
+        if (res.status === 'success') {
+            document.getElementById('batchCount').innerText = res.batch_count;
+
+            // Clear Form UI partially (reset name for next person, but keep date?)
+            document.getElementById('devName').value = '';
+            document.getElementById('devStar').value = '';
+            document.getElementById('devName').focus();
+
+            renderCart({ items: [], total: 0 });
+            location.reload();
+        } else {
+            alert(res.message);
+        }
+        btn.disabled = false;
+    }
+
+
+
+    function showPrintDialog() {
+        // Show dialog always forunified mode
+        document.getElementById('printDialog').style.display = 'flex';
+    }
+
+    async function processUnifiedPrint() {
+        if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
+            alert("Cart is empty.");
+            return;
+        }
+
+        const validation = validateCartForVazhipadu(CURRENT_CART.items);
+        if (!validation.valid) {
+            alert(validation.msg);
+            return;
+        }
+
+        processDirectPrint();
+    }
+
+    function showBatchModal() {
+        const modal = document.getElementById('batchModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    async function recallBatchItem(index) {
+        // Confirm dialogs are blocked on some devices/kiosks, removing to ensure functionality
+        // if (!confirm("Recall this bill to Edit?")) return;
+
+        try {
+            const res = await api('/cashier/billing/batch/recall', { index });
+            if (res.status === 'success') {
+                location.reload();
+            } else {
+                alert("Cannot Recall: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("System Error during recall");
+        }
+    }
+
+    async function deleteBatchItem(index) {
+        // Confirm dialogs are blocked on some devices/kiosks, removing to ensure functionality
+        // if (!confirm("Delete this bill from batch?")) return;
+
+        try {
+            const res = await api('/cashier/billing/batch/remove-entry', { index });
+            if (res.status === 'success') {
+                location.reload();
+            } else {
+                alert("Cannot Delete: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("System Error during delete");
+        }
+    }
+
+    async function processBatchPrint() {
+        const type = document.querySelector('input[name="printGroup"]:checked').value;
+        const btn = document.querySelector('button[onclick="processBatchPrint()"]');
+
+        btn.innerText = 'Printing...';
+        btn.disabled = true;
+
+        try {
+            const res = await api('/cashier/billing/checkout', {
+                is_batch: true,
+                group_by: type
+            });
+
+            if (res.status === 'success') {
+                document.getElementById('printDialog').style.display = 'none';
+                alert("Print Job Sent!");
+                location.reload();
+            } else if (res.status === 'print_web') {
+                document.getElementById('printDialog').style.display = 'none';
+
+                // Store content for reprint
+                lastPrintContent = res.content;
+
+                // Use Iframe to bypass popup blockers
+                printContentInIframe(res.content);
+
+                // Show confirmation overlay instead of auto-reloading
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.background = 'rgba(0,0,0,0.8)';
+                overlay.style.zIndex = '2000'; // Above everything
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.color = 'white';
+                overlay.innerHTML = `
+                    <h2 style="margin-bottom: 1rem; color: white;">Printing...</h2>
+                    <p style="margin-bottom: 2rem; color: white;">Please finish printing in the system dialog.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <button onclick="reprintLast()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Reprint
+                        </button>
+                        <button onclick="location.reload()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Done / Start New Bill
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            } else {
+                alert("Error: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Network or Server Error");
+        }
+
+        btn.innerText = 'PRINT ALL';
+        btn.disabled = false;
+    }
+
+    async function processDirectPrint() {
+        // Use a more robust selector or ID if possible, but fallback to searching by text if onclick matches exact string
+        // The error happens because querySelector returns null.
+        // Let's rely on the button passed to processUnifiedPrint? No, that calls this.
+        // Let's add an ID to the print button in the HTML first, but for now, let's select by class and text to be safe, or just try catch.
+        let btn = document.querySelector('button[onclick="processUnifiedPrint()"]');
+        if (!btn) {
+            // Fallback for safety
+            console.warn("Print button not found for loading state update.");
+            btn = { innerText: '', disabled: false }; // Dummy object to prevent crash
+        }
+
+        btn.innerText = 'Printing...';
+        btn.disabled = true;
+
+        try {
+            const res = await api('/cashier/billing/checkout', {
+                is_batch: false
+            });
+
+            if (res.status === 'success') {
+                alert("Print Job Sent!");
+                location.reload();
+            } else if (res.status === 'print_web') {
+                // Store content for reprint
+                lastPrintContent = res.content;
+
+                // Use Iframe to bypass popup blockers
+                printContentInIframe(res.content);
+
+                // Show confirmation overlay instead of auto-reloading
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.background = 'rgba(0,0,0,0.8)';
+                overlay.style.zIndex = '2000'; // Above everything
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.color = 'white';
+                overlay.innerHTML = `
+                    <h2 style="margin-bottom: 1rem; color: white;">Printing...</h2>
+                    <p style="margin-bottom: 2rem; color: white;">Please finish printing in the system dialog.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <button onclick="reprintLast()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Reprint
+                        </button>
+                        <button onclick="location.reload()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Done / Start New Bill
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            } else {
+                alert("Error: " + res.message);
+                btn.innerText = 'Print Receipt';
+                btn.disabled = false;
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Network or Server Error");
+            btn.innerText = 'Print Receipt';
+            btn.disabled = false;
+        }
+    }
+
+    const DRAFTS_KEY = 'devalaya_billing_sessions';
+    let CURRENT_CART = JSON.parse(document.getElementById('data-cart').textContent);
+
+    function renderDrafts() {
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const now = Date.now();
+        const twelveHours = 12 * 60 * 60 * 1000;
+
+        // Auto-delete drafts older than 12 hours
+        const validDrafts = drafts.filter(d => (now - d.timestamp) < twelveHours);
+        if (validDrafts.length !== drafts.length) {
+            localStorage.setItem(DRAFTS_KEY, JSON.stringify(validDrafts));
+        }
+
+        const modeDrafts = validDrafts.filter(d => d.cart.mode === MODE);
+        const section = document.getElementById('draftsSection');
+        const list = document.getElementById('draftsList');
+
+        if (modeDrafts.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+        list.innerHTML = modeDrafts.map(d => {
+            const name = d.cart.devotee_name || 'Quick Bill';
+            const total = d.cart.total;
+            const time = new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            return `
+                <div style="position: relative; min-width: 130px;">
+                    <div onclick="resumeDraft('${d.id}')" title="Saved at ${time}"
+                        style="display: flex; flex-direction: column; background: white; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; cursor: pointer; box-shadow: var(--shadow-sm); height: 100%;">
+                        <span style="font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 15px;">
+                            ${name}
+                        </span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                            <span style="font-size: 0.7rem; color: #b45309;">₹${total}</span>
+                            <span style="font-size: 0.6rem; color: #94a3b8;">${time}</span>
+                        </div>
+                    </div>
+                    <button onclick="discardDraft(event, '${d.id}')" 
+                        style="position: absolute; top: 2px; right: 2px; background: #fee2e2; color: #ef4444; border: none; border-radius: 4px; width: 22px; height: 22px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                        ✕
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function saveDraft() {
+        if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
+            alert("Cart is empty");
+            return;
+        }
+
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const newDraft = {
+            id: 'dr_' + Date.now(),
+            timestamp: Date.now(),
+            cart: { ...CURRENT_CART, mode: MODE }
+        };
+
+        drafts.unshift(newDraft);
+        localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+
+        // Clear server cart and reload
+        await api('/cashier/billing/cart/update', { action: 'init', mode: MODE });
+        location.reload();
+    }
+
+    async function resumeDraft(id) {
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const draft = drafts.find(d => d.id === id);
+        if (!draft) return;
+
+        try {
+            const res = await api('/cashier/billing/cart/resume-draft', { cart: draft.cart });
+            if (res.status === 'success') {
+                // Remove from drafts once resumed
+                const remaining = drafts.filter(d => d.id !== id);
+                localStorage.setItem(DRAFTS_KEY, JSON.stringify(remaining));
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error("Resume error:", e);
+            alert("Failed to resume session. Please try again.");
+        }
+    }
+
+    function discardDraft(e, id) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Confirm dialogs are blocked on some devices/kiosks, removing to ensure functionality
+        // if (!window.confirm("Discard this session?")) return;
+
+        try {
+            const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+            const remaining = drafts.filter(d => String(d.id) !== String(id));
+            localStorage.setItem(DRAFTS_KEY, JSON.stringify(remaining));
+
+            // Re-render and also refresh the UI section
+            renderDrafts();
+
+            // If it was the last one, the section will hide via renderDrafts
+        } catch (err) {
+            console.error("Discard error:", err);
+            // Fallback: clear and reload if anything fails
+            window.location.reload();
+        }
+    }
+
+    function clearAllDrafts() {
+        // if (!confirm("Discard ALL pending sessions for this mode?")) return;
+        const drafts = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]');
+        const remaining = drafts.filter(d => d.cart.mode !== MODE);
+        localStorage.setItem(DRAFTS_KEY, JSON.stringify(remaining));
+        renderDrafts();
+    }
+
+    async function changeQuantity(id, currentQty, delta) {
+        const newQty = parseInt(currentQty) + parseInt(delta);
+        if (newQty <= 0) {
+            // Optional: Confirm before removal? 
+            // For speed, cashier apps usually just remove.
+            removeFromCart(id);
+            return;
+        }
+
+        const res = await api('/cashier/billing/cart/update', {
+            action: 'update_quantity', id: id, count: newQty
+        });
+        renderCart(res.cart);
+    }
+
+    function renderCart(cart) {
+        CURRENT_CART = cart; // Keep client-side state in sync
+        const container = document.getElementById('cartItems');
+        container.innerHTML = cart.items.map(item => `
+        <div class="cart-item">
+            <div class="cart-item-info">
+                <div class="cart-item-title">${item.name}</div>
+                <div class="cart-item-details">
+                    <div class="qty-control">
+                        <button onclick="changeQuantity('${item.id}', ${item.count}, -1)" class="btn-qty minus" title="Decrease">
+                            −
+                        </button>
+                        <span class="qty-display">${item.count}</span>
+                        <button onclick="changeQuantity('${item.id}', ${item.count}, 1)" class="btn-qty plus" title="Increase">
+                            +
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="cart-item-actions">
+                <div class="cart-item-price">₹${item.total}</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">(₹${item.amount} ea)</div>
+                <!-- Optional: Keep Remove button or rely on Qty 0? Keeping it is safer for Quick Remove -->
+                <button onclick="removeFromCart('${item.id}')" class="btn-remove" title="Remove" style="margin-top: 4px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+        document.getElementById('cartTotal').innerText = '₹' + cart.total;
+
+        if (cart.items.length === 0) {
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8; opacity: 0.6;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">Cart is empty</p>
+                </div>
+            `;
+        }
+    }
+
+    // Autocomplete Logic
+    function showStars() {
+        // if (MODE !== 'vazhipadu') return;
+        filterStars();
+    }
+
+    function filterStars() {
+        const input = document.getElementById('devStar');
+        const results = document.getElementById('starResults');
+        const query = input.value.toLowerCase().trim();
+
+        results.classList.add('active');
+
+        const filtered = ALL_STARS.filter(s =>
+            s.eng.toLowerCase().includes(query) ||
+            s.mal.includes(query)
+        );
+
+        // Clear previous results
+        results.innerHTML = '';
+
+        if (filtered.length === 0) {
+            const noResultItem = document.createElement('div');
+            noResultItem.className = 'autocomplete-item text-muted';
+            noResultItem.textContent = 'No results found';
+            results.appendChild(noResultItem);
+            return;
+        }
+
+        filtered.forEach(s => {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+
+            const malSpan = document.createElement('span');
+            malSpan.textContent = s.mal;
+
+            const engSpan = document.createElement('span');
+            engSpan.className = 'eng-hint';
+            engSpan.textContent = s.eng;
+
+            item.appendChild(malSpan);
+            item.appendChild(engSpan);
+
+            item.addEventListener('click', function () {
+                selectStar(s.mal);
+            });
+
+            results.appendChild(item);
+        });
+    }
+
+    function selectStar(val) {
+        const input = document.getElementById('devStar');
+        input.value = val;
+        hideStars();
+        updateDetails();
+    }
+
+    // --- Replicate Logic ---
+    let REPLICATE_DATES = [];
+
+    function showReplicateModal() {
+        if (!document.getElementById('devName').value.trim()) {
+            alert("Please enter Devotee Name first.");
+            return;
+        }
+        document.getElementById('replicateModal').style.display = 'flex';
+        REPLICATE_DATES = [];
+        renderRepDates();
+        // Set default date to picker
+        document.getElementById('repDateInput').value = new Date().toISOString().split('T')[0];
+    }
+
+    function closeReplicateModal() {
+        document.getElementById('replicateModal').style.display = 'none';
+        REPLICATE_DATES = [];
+    }
+
+    function addRepDate() {
+        const input = document.getElementById('repDateInput');
+        const val = input.value;
+        if (!val) return;
+
+        if (!REPLICATE_DATES.includes(val)) {
+            REPLICATE_DATES.push(val);
+            REPLICATE_DATES.sort();
+        }
+        renderRepDates();
+    }
+
+    function removeRepDate(dateStr) {
+        REPLICATE_DATES = REPLICATE_DATES.filter(d => d !== dateStr);
+        renderRepDates();
+    }
+
+    function renderRepDates() {
+        const container = document.getElementById('repDateList');
+        if (REPLICATE_DATES.length === 0) {
+            container.innerHTML = '<span class="text-muted" style="font-size: 0.8rem; padding: 1rem; width: 100%; text-align: center;">No dates selected</span>';
+            return;
+        }
+        container.innerHTML = REPLICATE_DATES.map(d => `
+            <div class="date-chip">
+                <span>${formatDate(d)}</span>
+                <button onclick="removeRepDate('${d}')">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    function formatDate(isoStr) {
+        const parts = isoStr.split('-');
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+
+    async function processReplicate() {
+        if (REPLICATE_DATES.length === 0) {
+            alert("Select at least one date.");
+            return;
+        }
+
+        const btn = document.querySelector('button[onclick="processReplicate()"]');
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        try {
+            const res = await api('/cashier/billing/batch/add', {
+                dates: REPLICATE_DATES
+            });
+
+            if (res.status === 'success') {
+                document.getElementById('batchCount').innerText = res.batch_count;
+
+                // Reset Form
+                document.getElementById('devName').value = '';
+                document.getElementById('devStar').value = '';
+                document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('devName').focus();
+
+                renderCart({ items: [], total: 0 });
+                closeReplicateModal();
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error replicating bills.");
+        }
+
+        btn.disabled = false;
+        btn.innerText = "Replicate & Add";
+    }
+
+    function hideStars() {
+        setTimeout(() => {
+            const results = document.getElementById('starResults');
+            if (results) results.classList.remove('active');
+        }, 300);
+    }
+
+    // Initialize
+    renderDrafts();
+
+    // if (MODE === 'vazhipadu') { // Always unified now
+    const dateInput = document.getElementById('scheduledDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+        updateDetails();
+    }
+
+    // Close results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-container')) {
+            const res = document.getElementById('starResults');
+            if (res) res.classList.remove('active');
+        }
+    });
+</script>
+{% endblock %}
