@@ -1,0 +1,4 @@
+waitress>=3.0.1
+psutil
+Werkzeug
+requests

@@ -188,30 +188,56 @@ def update_system():
         print("[*] No local update source. Checking GitHub for releases...")
         try:
             import urllib.request
+            import urllib.error
             import json
             import version  # Import local version module
 
             api_url = "https://api.github.com/repos/theagg-18/devalaya-pro/releases/latest"
+            tags_url = "https://api.github.com/repos/theagg-18/devalaya-pro/tags"
             headers = {'User-Agent': 'Devalaya-Manager'}
             
-            req = urllib.request.Request(api_url, headers=headers)
-            with urllib.request.urlopen(req) as response:
-                if response.status != 200:
-                    print(f"[-] Failed to check updates. GitHub API returned {response.status}")
+            latest_tag = None
+            zip_url = None
+
+            # 1. Try Releases
+            try:
+                req = urllib.request.Request(api_url, headers=headers)
+                with urllib.request.urlopen(req) as response:
+                    data = json.loads(response.read().decode('utf-8'))
+                    latest_tag = data.get('tag_name')
+                    zip_url = data.get('zipball_url')
+            except urllib.error.HTTPError as e:
+                if e.code != 404:
+                    print(f"[-] Failed to check releases. GitHub API returned {e.code}")
                     return
-                
-                data = json.loads(response.read().decode('utf-8'))
-                latest_tag = data.get('tag_name', 'v0.0.0')
-                zip_url = data.get('zipball_url')
-                
-                # Simple version compare
-                current_ver = version.__version__
-                print(f"[*] Current: {current_ver}, Latest: {latest_tag}")
-                
-                # Check uniqueness (naive check, assuming strictly increasing tags)
-                if latest_tag == f"v{current_ver}" or latest_tag == current_ver:
-                    print("[+] You are already using the latest version.")
+                # If 404, fall through to tags
+
+            # 2. Try Tags (Fallback)
+            if not latest_tag:
+                print("[*] No formal release found. Checking tags...")
+                try:
+                    req = urllib.request.Request(tags_url, headers=headers)
+                    with urllib.request.urlopen(req) as response:
+                        tags = json.loads(response.read().decode('utf-8'))
+                        if tags:
+                            latest_tag = tags[0].get('name')
+                            zip_url = tags[0].get('zipball_url')
+                except Exception as e:
+                    print(f"[-] Failed to check tags: {e}")
                     return
+
+            if not latest_tag or not zip_url:
+                print("[-] No updates found (No releases or tags).")
+                return
+                
+            # Simple version compare
+            current_ver = version.__version__
+            print(f"[*] Current: {current_ver}, Latest: {latest_tag}")
+            
+            # Remove 'v' prefix for comparison if needed, but string match usually enough for equality
+            if latest_tag == f"v{current_ver}" or latest_tag == current_ver:
+                print("[+] You are already using the latest version.")
+                return
 
                 print(f"[!] New version available: {latest_tag}")
                 choice = input("Do you want to download and install this update? (y/n): ").lower()

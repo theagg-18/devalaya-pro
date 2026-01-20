@@ -1,0 +1,986 @@
+from flask import Blueprint, render_template, request, flash, redirect, url_for, g, session
+from database import get_db
+from routes.auth import login_required
+from utils.timezone_utils import now_ist, IST, format_ist_datetime, parse_db_timestamp, get_ist_timestamp
+import html
+
+
+cashier_bp = Blueprint('cashier', __name__, url_prefix='/cashier')
+
+@cashier_bp.route('/')
+@login_required
+def index():
+    if g.user['role'] != 'cashier':
+        return redirect(url_for('admin.index'))
+        
+    db = get_db()
+    
+    # Check for active session
+    active_session = db.execute(
+        'SELECT * FROM cashier_sessions WHERE cashier_id = ? AND is_active = 1',
+        (g.user['id'],)
+    ).fetchone()
+    
+    if not active_session:
+        return redirect(url_for('cashier.select_printer'))
+        
+    # Load printer details
+    printer = db.execute('SELECT * FROM printers WHERE id = ?', (active_session['printer_id'],)).fetchone()
+    
+    return render_template('cashier/dashboard.html', printer=printer)
+
+@cashier_bp.route('/select-printer', methods=('GET', 'POST'))
+@login_required
+def select_printer():
+    if g.user['role'] != 'cashier':
+        return redirect(url_for('admin.index'))
+    
+    db = get_db()
+    
+    if request.method == 'POST':
+        printer_id = request.form['printer_id']
+        
+        # Deactivate any old sessions
+        db.execute('UPDATE cashier_sessions SET is_active = 0 WHERE cashier_id = ?', (g.user['id'],))
+        
+        # Create new session
+        db.execute('INSERT INTO cashier_sessions (cashier_id, printer_id) VALUES (?, ?)',
+                   (g.user['id'], printer_id))
+        db.commit()
+        
+        return redirect(url_for('cashier.index'))
+
+    # Show only active printers
+    printers = db.execute('SELECT * FROM printers WHERE is_active = 1').fetchall()
+    return render_template('cashier/select_printer.html', printers=printers)
+
+@cashier_bp.route('/release-printer')
+@login_required
+def release_printer():
+    db = get_db()
+    db.execute('UPDATE cashier_sessions SET is_active = 0 WHERE cashier_id = ?', (g.user['id'],))
+    db.commit()
+    flash('Printer released', 'info')
+    return redirect(url_for('cashier.select_printer'))
+
+# --- Billing Logic ---
+
+STARS = [
+    {"eng": "Ashwati", "mal": "അശ്വതി"},
+    {"eng": "Bharani", "mal": "ഭരണി"},
+    {"eng": "Karthika", "mal": "കാർത്തിക"},
+    {"eng": "Rohini", "mal": "രോഹിണി"},
+    {"eng": "Makayiram", "mal": "മകയിരം"},
+    {"eng": "Thiruvathira", "mal": "തിരുവാതിര"},
+    {"eng": "Punartham", "mal": "പുണർതം"},
+    {"eng": "Pooyam", "mal": "പൂയം"},
+    {"eng": "Ayilyam", "mal": "ആയില്യം"},
+    {"eng": "Makam", "mal": "മകം"},
+    {"eng": "Pooram", "mal": "പൂരം"},
+    {"eng": "Uthram", "mal": "ഉത്രം"},
+    {"eng": "Atham", "mal": "അത്തം"},
+    {"eng": "Chithira", "mal": "ചിത്തിര"},
+    {"eng": "Choti", "mal": "ചോതി"},
+    {"eng": "Vishakham", "mal": "വിശാഖം"},
+    {"eng": "Anizham", "mal": "അനിഴം"},
+    {"eng": "Thrikketta", "mal": "തൃക്കേട്ട"},
+    {"eng": "Moolam", "mal": "മൂലം"},
+    {"eng": "Pooradam", "mal": "പൂരാടം"},
+    {"eng": "Uthradam", "mal": "ഉത്രാടം"},
+    {"eng": "Thiruvonam", "mal": "തിരുവോണം"},
+    {"eng": "Avittam", "mal": "അവിട്ടം"},
+    {"eng": "Chathayam", "mal": "ചതയം"},
+    {"eng": "Pooruruttathi", "mal": "പൂരുരുട്ടാതി"},
+    {"eng": "Uthrattathi", "mal": "ഉത്രട്ടാതി"},
+    {"eng": "Revathi", "mal": "രേവതി"}
+]
+
+@cashier_bp.route('/history')
+@login_required
+def history():
+    db = get_db()
+    query = request.args.get('q', '')
+    
+    sql = "SELECT * FROM bills WHERE cashier_id = ? AND status != 'draft'"
+    params = [g.user['id']]
+    
+    # Date Filter Logic (Same as Admin Reports)
+    date_filter = request.args.get('date')
+    
+    if query:
+        # Search by Bill No or Devotee Name (Global Search)
+        sql += ' AND (bill_no LIKE ? OR devotee_name LIKE ?)'
+        wildcard = f'%{query}%'
+        params.extend([wildcard, wildcard])
+        
+        # Explicitly clear date filter so UI shows we searched everywhere
+        date_filter = ''
+    else:
+        if date_filter:
+            sql += ' AND date(created_at) = ?'
+            params.append(date_filter)
+        else:
+            # Default to today
+            import datetime
+            today = datetime.date.today().isoformat()
+            sql += ' AND date(created_at) = ?'
+            params.append(today)
+            date_filter = today
+
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+    
+    # 1. Get Total Count
+    count_sql = f"SELECT COUNT(*) FROM ({sql})"
+    total_records = db.execute(count_sql, params).fetchone()[0]
+    total_pages = (total_records + per_page - 1) // per_page
+    
+    # 2. Get Paginated Records
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    params.extend([per_page, offset])
+    
+    bills = db.execute(sql, params).fetchall()
+    
+    # Fetch items for each bill
+    bill_list = []
+    for bill in bills:
+        # Convert row to dict to add items
+        b_dict = dict(bill)
+        b_dict['line_items'] = db.execute('''
+            SELECT bi.*, pm.name 
+            FROM bill_items bi 
+            JOIN puja_master pm ON bi.puja_id = pm.id 
+            WHERE bi.bill_id = ?
+        ''', (bill['id'],)).fetchall()
+        
+        # Format Dates
+        try:
+             from datetime import datetime as dt, timezone
+             
+             # Format created_at
+             if b_dict.get('created_at'):
+                 raw_ts = b_dict['created_at']
+                 if isinstance(raw_ts, str):
+                     # Handle potential ISO format with or without T, and microseconds
+                     # Simple approach: try parsing common formats
+                     try:
+                        ts_obj = dt.strptime(raw_ts, '%Y-%m-%d %H:%M:%S')
+                     except ValueError:
+                        try:
+                            # Try with T separator
+                            ts_obj = dt.strptime(raw_ts, '%Y-%m-%dT%H:%M:%S')
+                        except ValueError:
+                             # Try with microseconds
+                             ts_obj = dt.strptime(raw_ts.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                      
+                     # Assume DB timestamp is IST
+                     local_ts = ts_obj.replace(tzinfo=IST)
+                     b_dict['created_at'] = format_ist_datetime(local_ts, '%d-%m-%Y %I:%M %p')
+                 elif isinstance(raw_ts, dt):
+                       # If it's already a datetime object, assume it's IST from SQL
+                       local_ts = raw_ts.replace(tzinfo=IST)
+                       b_dict['created_at'] = format_ist_datetime(local_ts, '%d-%m-%Y %I:%M %p')
+
+             # Format scheduled_date
+             if b_dict.get('scheduled_date'):
+                 raw_date = b_dict['scheduled_date']
+                 if isinstance(raw_date, str):
+                     try:
+                        date_obj = dt.strptime(raw_date, '%Y-%m-%d')
+                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
+                     except:
+                        pass # Keep original string if parse fails
+                 elif hasattr(raw_date, 'strftime'):
+                     b_dict['scheduled_date'] = raw_date.strftime('%d-%m-%Y')
+                     
+        except Exception as e:
+            print(f"Date formatting error: {e}")
+            import traceback
+            traceback.print_exc()
+            
+        bill_list.append(b_dict)
+    
+    return render_template('cashier/history.html', bills=bill_list, query=query, date_filter=date_filter,
+                           current_page=page, total_pages=total_pages)
+
+@cashier_bp.route('/billing/unified')
+@login_required
+def start_billing():
+    if g.user['role'] != 'cashier':
+        return redirect(url_for('admin.index'))
+    
+    # Initialize connection specific to this request
+    db = get_db()
+    
+    # Check session
+    active_session = db.execute(
+        'SELECT * FROM cashier_sessions WHERE cashier_id = ? AND is_active = 1',
+        (g.user['id'],)
+    ).fetchone()
+    if not active_session:
+        return redirect(url_for('cashier.select_printer'))
+
+    # Load ALL Puja/Items for unified mode
+    # Order: Pujas first, then Items? Or just alphabetic? 
+    # Let's order by type DESC (puja first), then name
+    items = db.execute('SELECT * FROM puja_master WHERE is_active = 1 ORDER BY type DESC, name').fetchall()
+    
+    star_map = {s['eng']: s['mal'] for s in STARS}
+    
+    # Check if cart exists, if not init empty
+    # We don't rely on 'mode' in cart anymore for filtering, but maybe for reporting?
+    # Default mode 'unified'
+    import datetime
+    today = datetime.date.today().isoformat()
+    cart = session.get('cart', {'items': [], 'total': 0})
+    
+    # Ensure scheduled_date is always set to today if empty or missing
+    if not cart.get('scheduled_date'):
+        cart['scheduled_date'] = today
+        session['cart'] = cart
+        session.modified = True
+    
+    return render_template('cashier/billing.html', mode='unified', stars=STARS, star_map=star_map, items=items, 
+                           cart=cart, 
+                           batch=session.get('batch', []))
+
+@cashier_bp.route('/billing/cart/update', methods=['POST'])
+@login_required
+def update_cart():
+    # Helper to manage cart in session
+    # Expects JSON: { action: 'add'|'remove'|'set_details', ... }
+    data = request.json
+    cart = session.get('cart', {'items': [], 'total': 0})
+    
+    if data['action'] == 'init':
+        # Preserve details if changing modes? No, clear mostly.
+        import datetime
+        today = datetime.date.today().isoformat()
+        cart = {
+            'mode': html.escape(data.get('mode', '')),
+            'items': [],
+            'total': 0,
+            'devotee_name': '',
+            'star': '',
+            'scheduled_date': today
+        }
+        
+    elif data['action'] == 'set_details':
+        cart['devotee_name'] = html.escape(data.get('name', ''))
+        cart['star'] = html.escape(data.get('star', ''))
+        cart['scheduled_date'] = html.escape(data.get('scheduled_date', ''))
+        
+    elif data['action'] == 'add':
+        item_id = int(data['id'])
+        name = html.escape(data.get('name', ''))
+        amount = float(data['amount'])
+        
+        # Check if item exists
+        found = False
+        for item in cart['items']:
+            if item['id'] == item_id:
+                item['count'] += 1
+                item['total'] = item['count'] * item['amount']
+                found = True
+                break
+        if not found:
+            cart['items'].append({
+                'id': item_id,
+                'name': name,
+                'amount': amount,
+                'count': 1,
+                'total': amount,
+                'type': html.escape(data.get('type', 'item'))  # Default to item if not provided
+            })
+            
+    elif data['action'] == 'remove':
+        item_id = int(data['id'])
+        cart['items'] = [i for i in cart['items'] if i['id'] != item_id]
+
+    elif data['action'] == 'update_quantity':
+        item_id = int(data['id'])
+        new_qty = int(data['count'])
+        
+        if new_qty <= 0:
+            # Remove item if quantity is zero or less
+            cart['items'] = [i for i in cart['items'] if i['id'] != item_id]
+        else:
+            # Update quantity
+            for item in cart['items']:
+                if item['id'] == item_id:
+                    item['count'] = new_qty
+                    item['total'] = new_qty * item['amount']
+                    break
+
+    # Recalculate global total
+    cart['total'] = sum(i['total'] for i in cart['items'])
+    session['cart'] = cart
+    session.modified = True
+    
+    # Prepare safe cart for response (XSS Protection)
+    safe_cart = {}
+    safe_cart['mode'] = html.escape(cart.get('mode', ''))
+    safe_cart['devotee_name'] = html.escape(cart.get('devotee_name', ''))
+    safe_cart['star'] = html.escape(cart.get('star', ''))
+    safe_cart['scheduled_date'] = html.escape(cart.get('scheduled_date', ''))
+    safe_cart['total'] = float(cart.get('total', 0))
+    
+    safe_items = []
+    for item in cart.get('items', []):
+        safe_item = item.copy()
+        safe_item['name'] = html.escape(item.get('name', ''))
+        safe_item['type'] = html.escape(item.get('type', ''))
+        # Enforce numeric types
+        try:
+            safe_item['id'] = int(item.get('id', 0))
+            safe_item['amount'] = float(item.get('amount', 0))
+            safe_item['count'] = int(item.get('count', 0))
+            safe_item['total'] = float(item.get('total', 0))
+        except (ValueError, TypeError):
+            continue # Skip malformed items or handle gracefully
+        safe_items.append(safe_item)
+    
+    safe_cart['items'] = safe_items
+
+    return {'status': 'success', 'cart': safe_cart}
+
+@cashier_bp.route('/billing/batch/add', methods=['POST'])
+@login_required
+def add_to_batch():
+    cart = session.get('cart')
+    if not cart or not cart['items']:
+        return {'status': 'error', 'message': 'Cart is empty'}
+
+    data = request.json or {}
+    replication_dates = data.get('dates', []) # List of "YYYY-MM-DD" strings
+
+    batch = session.get('batch', [])
+    
+    if replication_dates:
+        # Replicate Mode
+        import copy
+        count_added = 0
+        for date_str in replication_dates:
+            # Deep copy to ensure unique objects
+            cart_copy = copy.deepcopy(cart)
+            cart_copy['scheduled_date'] = date_str
+            batch.append(cart_copy)
+            count_added += 1
+    else:
+        # Standard Single Add
+        batch.append(cart)
+    
+    session['batch'] = batch
+    
+    # Clear cart but keep mode
+    session['cart'] = {'mode': cart.get('mode', 'vazhipadu'), 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': ''}
+    session.modified = True
+    
+    return {'status': 'success', 'batch_count': len(batch)}
+
+@cashier_bp.route('/billing/batch/clear', methods=['POST'])
+@login_required
+def clear_batch():
+    session.pop('batch', None)
+    return {'status': 'success'}
+
+@cashier_bp.route('/billing/batch/recall', methods=['POST'])
+@login_required
+def recall_batch_entry():
+    idx = request.json.get('index')
+    batch = session.get('batch', [])
+    
+    if idx is None or idx < 0 or idx >= len(batch):
+        return {'status': 'error', 'message': 'Invalid batch index'}
+        
+    # Check if current cart is empty to avoid overwriting
+    current_cart = session.get('cart')
+    if current_cart and current_cart.get('items'):
+        return {'status': 'error', 'message': 'An error occurred during checkout.'}
+        
+    # Pop from batch and set as cart
+    entry = batch.pop(idx)
+    session['batch'] = batch
+    session['cart'] = entry
+    session.modified = True
+    
+    return {'status': 'success'}
+
+@cashier_bp.route('/billing/batch/remove-entry', methods=['POST'])
+@login_required
+def remove_batch_entry():
+    idx = request.json.get('index')
+    batch = session.get('batch', [])
+    
+    if idx is None or idx < 0 or idx >= len(batch):
+        return {'status': 'error', 'message': 'Invalid batch index'}
+        
+    batch.pop(idx)
+    session['batch'] = batch
+    session.modified = True
+    
+    return {'status': 'success'}
+
+@cashier_bp.route('/billing/checkout', methods=['POST'])
+@login_required
+def checkout():
+    # Supports both Single Checkout (from Cart) and Batch Checkout
+    data = request.json
+    is_batch = data.get('is_batch', False)
+    group_by = data.get('group_by', 'devotee') # 'devotee' or 'puja'
+    
+    items_to_process = []
+    
+    if is_batch:
+        batch = session.get('batch', [])
+        if not batch:
+             return {'status': 'error', 'message': 'Batch is empty'}
+        items_to_process = batch
+    else:
+        cart = session.get('cart')
+        if not cart or not cart['items']:
+            return {'status': 'error', 'message': 'Cart is empty'}
+        items_to_process = [cart]
+
+    db = get_db()
+    
+    # Get active session info
+    c_session = db.execute(
+        'SELECT * FROM cashier_sessions WHERE cashier_id = ? AND is_active = 1',
+        (g.user['id'],)
+    ).fetchone()
+    
+    if not c_session:
+        return {'status': 'error', 'message': 'Printer session invalid'}
+
+    try:
+        printer_name = db.execute('SELECT name FROM printers WHERE id=?', (c_session['printer_id'],)).fetchone()[0]
+        
+        from modules.printers import printer_manager
+        
+        full_print_content = ""
+        bill_ids = []
+
+        # Process each "Cart" in the batch
+        for bill_data in items_to_process:
+             # Create Bill
+            name = bill_data.get('devotee_name')
+            star = bill_data.get('star')
+            b_type = bill_data.get('mode', 'vazhipadu')
+            draft_id = bill_data.get('draft_id')
+            scheduled_date = bill_data.get('scheduled_date')
+            total_amount = bill_data['total']
+            
+            # RETRY LOOP for Safe Concurrent Numbering
+            # We try up to 5 times to get a unique slot
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    # 1. Get Latest Sequence (Inside loop to be fresh)
+                    # We start a fresh transaction for this check implicitly if previous committed, 
+                    # but strictly, 'execute' sees current DB state.
+                    last_seq_row = db.execute('SELECT MAX(bill_seq) FROM bills').fetchone()
+                    current_seq = last_seq_row[0] if last_seq_row and last_seq_row[0] is not None else 0
+                    new_seq = current_seq + 1
+                    
+                    # Format Bill No: B-{year}-{seq}
+                    year = now_ist().year
+                    bill_no = f"B-{year}-{new_seq}"
+                    
+                    # 2. Insert/Update with this Bill No
+                    # This will fail with IntegrityError if someone else grabbed it 
+                    # between the SELECT and INSERT/UPDATE.
+                    
+                    status = 'printed' 
+                    ist_timestamp = get_ist_timestamp()
+
+                    if draft_id:
+                        # REUSE existing Draft - Update it
+                        # Optimistically try to set the new bill_no
+                        db.execute(
+                            '''UPDATE bills SET 
+                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?
+                               WHERE id=?''', 
+                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, draft_id)
+                        )
+                        bill_id = draft_id
+                        
+                        # Verify Update Count - if 0 that means draft gone, fallback to insert? 
+                        # Or more likely, if Constraint failed, it raises IntegrityError
+                        
+                        # Delete old items to overwrite
+                        db.execute('DELETE FROM bill_items WHERE bill_id=?', (bill_id,))
+                        
+                    else:
+                        # Create NEW Bill
+                        # We include bill_no here to trigger UNIQUE constraint immediately
+                        cur = db.execute(
+                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp)
+                        )
+                        bill_id = cur.lastrowid
+                    
+                    # If we reached here, success! We own this number.
+                    bill_ids.append(bill_no) 
+                    
+                    # Add Items
+                    for item in bill_data['items']:
+                        db.execute(
+                            '''INSERT INTO bill_items (bill_id, puja_id, price_snapshot, count, total)
+                               VALUES (?, ?, ?, ?, ?)''',
+                            (bill_id, item['id'], item['amount'], item['count'], item['total'])
+                        )
+                    
+                    # Commit this bill immediately to lock the sequence for others?
+                    # Or keep open transaction? 
+                    # Keeping it open holds the lock if we are in WAL mode effectively, 
+                    # but committing is safer to "publish" the used number.
+                    # Given we have a batch, we can commit per bill to be safe, 
+                    # or commit all at end. 
+                    # If we commit at end, the "SELECT MAX" by other threads might not see our uncommitted changes 
+                    # unless we are using specific isolation levels.
+                    # Best practice for this "Gapless Sequence" in high concurrency:
+                    # Commit often or use explicit locking.
+                    # Let's rely on the UNIQUE constraint catching the collision.
+                    
+                    break # Break retry loop
+                    
+                except sqlite3.IntegrityError:
+                    # Collision detected! (bill_no already exists)
+                    if attempt == max_retries - 1:
+                        raise Exception("System busy. Could not generate bill number. Please try again.")
+                    else:
+                        # Wait a tiny bit (random ms) to desynchronize threads
+                        import time, random
+                        time.sleep(random.uniform(0.01, 0.05))
+                        continue
+                        
+        # Commit at the very end of the batch (or earlier if we chose per-bill)
+        # We'll stick to function-end commit, but note that this means 
+        # "SELECT MAX" from others might return the OLD max until we commit.
+        # However, their INSERT will fail because of our uncommitted write locking the row/index (in WAL) 
+        # or the UNIQUE index check. Correct.
+
+        
+        # GENERATE PRINT CONTENT
+        # Logic: 
+        # If "Group by Devotee" (Default):
+        #   Iterate Bills -> Iterate Items -> Print One Slip per Puja (REQUIREMENT: One Puja = One Page)
+        #   Wait, "One Puja = One Page" applies to MODE 1.
+        #   So:
+        #   Bill A (Devotee A):
+        #       - Item 1 (Pushpanjali) -> Page 1
+        #       - Item 2 (Archana) -> Page 2
+        #   Bill B (Devotee B):
+        #       - Item 1 -> Page 3
+        
+        # If "Group by Puja" (Option):
+        #   Collates all "Pushpanjali" together?
+        #   "Group by Puja (Item-wise)"
+        #   This likely means:
+        #   Page 1: Pushpanjali List (Devotee A, Devotee B...)
+        #   Page 2: Archana List (Devotee A...)
+        #   This is a summary mode. Useful for the Poojari.
+        
+        # Let's implement at least Default (Devotee-wise) which is straightforward.
+        
+        timestamp = format_ist_datetime(now_ist(), "%d-%m-%Y %H:%M")
+        
+        # Fetch Temple Header
+        settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+        header = f"{settings['name_mal']}\n{settings['name_eng']}\n"
+        footer = f"\n{settings['receipt_footer']}\n"
+        
+        print_slips = [] # Store individual slips
+        
+        # Helper to format slip text
+        def format_slip(b_id, d_name, d_star, items, timestamp, header, footer, scheduled_date=None):
+            slip = f"{header}\n"
+            slip += f"Bill: {b_id} | {timestamp}\n"
+            
+            # Print Scheduled Date
+            if scheduled_date:
+                try:
+                    from datetime import datetime as dt
+                    s_dt = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                    slip += f"Vazhipadu Date: {s_dt}\n"
+                except:
+                    slip += f"Vazhipadu Date: {scheduled_date}\n"
+
+            # Malayalam Star Translation
+            star_map = {s['eng']: s['mal'] for s in STARS}
+            star_disp = star_map.get(d_star, d_star)
+            if star_disp != d_star:
+                slip += f"Name: {d_name}\nStar: {star_disp} ({d_star})\n"
+            else:
+                slip += f"Name: {d_name}  Star: {d_star}\n"
+                
+            slip += "--------------------------------\n"
+            for item in items:
+                slip += f"{item['name']}\n"
+                slip += f"Qty: {item.get('count', item.get('qty', 1))}  Amt: {item.get('total', 0)}\n"
+            slip += "--------------------------------\n"
+            slip += f"{footer}"
+            return slip
+
+        if group_by == 'devotee':
+            for i, bill_data in enumerate(items_to_process):
+                b_id = bill_ids[i]
+                dev_name = bill_data.get('devotee_name') or "Devotee"
+                dev_star = bill_data.get('star') or ""
+                scheduled_date = bill_data.get('scheduled_date')
+                
+                # Iterate each item for "One Puja = One Slip"
+                for item in bill_data['items']:
+                    single_item_slip = format_slip(b_id, dev_name, dev_star, [item], timestamp, header, footer, scheduled_date)
+                    print_slips.append(single_item_slip)
+
+        elif group_by == 'puja':
+             # ... (Same logic, but grouping items differently)
+             # Collect all items
+            all_items = []
+            for idx, bill_data in enumerate(items_to_process):
+                b_num = bill_ids[idx]
+                d_name = bill_data.get('devotee_name')
+                d_star = bill_data.get('star')
+                for item in bill_data['items']:
+                    all_items.append({
+                        'bill_no': b_num, # Capture real Bill No
+                        'name': item['name'],
+                        'devotee': d_name,
+                        'star': d_star,
+                        'qty': item['count'],
+                        'total': item['total'],
+                        'scheduled_date': bill_data.get('scheduled_date')
+                    })
+            all_items.sort(key=lambda x: x['name'])
+            
+            for item in all_items:
+                # Use Standard Format Helper
+                slip = format_slip(
+                    item['bill_no'], 
+                    item['devotee'], 
+                    item['star'], 
+                    [item], # Pass single item as list
+                    timestamp, 
+                    header, 
+                    footer,
+                    item.get('scheduled_date')
+                )
+                print_slips.append(slip)
+        
+        if is_batch:
+            # Summary Slip
+            total_bills = len(items_to_process)
+            grand_total = sum(b['total'] for b in items_to_process)
+            
+            summary = f"{header}\n"
+            summary += "****** TOTAL AMOUNT ******\n"
+            summary += f"Time: {timestamp}\n"
+            summary += f"Total Bills: {total_bills}\n"
+            summary += f"Grand Total: {grand_total:.2f}\n"
+            summary += "***************************\n"
+            print_slips.append(summary)
+
+        # GENERATE FINAL OUTPUT BASED ON PRINTER TYPE
+        cut_cmd = "\n\n\n\x1dV\x00"
+        
+        if printer_name == 'WEB_BROWSER_PRINT':
+            # Prepare data for template
+            slips_data = [] # List of slip dictionaries
+            
+            # Helper to create slip data object
+            def create_slip_data(b_no, d_name, d_star, items, scheduled_date=None):
+                total = sum(i.get('total', 0) for i in items)
+                
+                # Format Scheduled Date
+                s_date_str = None
+                if scheduled_date:
+                    try:
+                        from datetime import datetime as dt
+                        s_date_str = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                    except:
+                        s_date_str = str(scheduled_date)
+                        
+                # Star Translation
+                star_map = {s['eng']: s['mal'] for s in STARS}
+                star_disp = star_map.get(d_star, d_star)
+                
+                return {
+                    'bill_no': b_no,
+                    'devotee_name': d_name,
+                    'star': star_disp,
+                    'scheduled_date': s_date_str,
+                    'line_items': items,
+                    'total': total
+                }
+
+            if group_by == 'devotee':
+                for i, bill_data in enumerate(items_to_process):
+                    b_id = bill_ids[i]
+                    dev_name = bill_data.get('devotee_name') or "Devotee"
+                    dev_star = bill_data.get('star') or ""
+                    scheduled_date = bill_data.get('scheduled_date')
+                    
+                    # Iterate each item for "One Puja = One Slip"
+                    for item in bill_data['items']:
+                        # Single item slip
+                        slips_data.append(create_slip_data(b_id, dev_name, dev_star, [item], scheduled_date))
+
+            elif group_by == 'puja':
+                # Consolidate by Item Type Logic (Complex, sticking to simple list for now)
+                # Re-using the same consolidation logic from before?
+                # The previous logic was: One slip per item occurrence but sorted? 
+                # "One Puja = One Page" implies independent slips.
+                # So we just iterate all items across all bills.
+                
+                all_entries = []
+                for idx, bill_data in enumerate(items_to_process):
+                    b_num = bill_ids[idx]
+                    d_name = bill_data.get('devotee_name')
+                    d_star = bill_data.get('star')
+                    s_date = bill_data.get('scheduled_date')
+                    
+                    for item in bill_data['items']:
+                        all_entries.append({
+                            'bill_no': b_num,
+                            'devotee_name': d_name,
+                            'star': d_star,
+                            'scheduled_date': s_date,
+                            'item': item # Single item
+                        })
+                
+                # Sort by Item Name
+                all_entries.sort(key=lambda x: x['item']['name'])
+                
+                for entry in all_entries:
+                    slips_data.append(create_slip_data(
+                        entry['bill_no'], 
+                        entry['devotee_name'], 
+                        entry['star'], 
+                        [entry['item']], 
+                        entry['scheduled_date']
+                    ))
+            
+            # Render Template from DB
+            from flask import render_template_string
+            
+            # Ensure template content exists, else fallback? (DB init ensures it, but safe to check)
+            if settings:
+                settings = dict(settings) # Convert Row to dict to ensure Jinja compatibility
+            else:
+                settings = {}
+
+            template_content = settings.get('print_template_content')
+            if not template_content:
+                # Fallback purely for safety if migration failed
+                template_content = "<h1>Error: No Print Template Found. Contact Admin.</h1>"
+                
+            html_content = render_template_string(template_content, 
+                                         slips=slips_data, 
+                                         settings=settings, 
+                                         timestamp=timestamp)
+            
+            db.commit()
+            if is_batch: session.pop('batch', None)
+            else: session.pop('cart', None)
+                
+            return {'status': 'print_web', 'content': html_content}
+
+        # Physical Printer
+        # Join with Cut Commands
+        full_text_content = cut_cmd.join(print_slips) + cut_cmd
+        
+        printer_manager.print_text(printer_name, full_text_content)
+        
+        # Commit DB
+        db.commit()
+        
+        # Clear Session
+        if is_batch:
+            session.pop('batch', None)
+        else:
+            session.pop('cart', None)
+        
+        return {'status': 'success'}
+        
+    except Exception as e:
+        import traceback
+        import logging
+        logging.error(f"Checkout error: {e}", exc_info=True)
+        with open('debug_checkout.log', 'w') as f:
+            f.write(str(e))
+            f.write(traceback.format_exc())
+            
+        return {'status': 'error', 'message': 'An error occurred during checkout. Please check logs.'}
+
+@cashier_bp.route('/billing/cart/resume-draft', methods=['POST'])
+@login_required
+def resume_client_draft():
+    data = request.json
+    session['cart'] = data['cart']
+    session.modified = True
+    return {'status': 'success'}
+
+@cashier_bp.route('/billing/reprint/<int:bill_id>', methods=['POST'])
+@login_required
+def reprint_bill(bill_id):
+    try:
+        db = get_db()
+        data = request.json or {}
+        
+        # Always use browser print for history reprint
+        printer_name = 'WEB_BROWSER_PRINT'
+        
+        # 2. Fetch Bill
+        bill_row = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
+        if not bill_row:
+            return {'status': 'error', 'message': 'Bill not found'}
+        bill = dict(bill_row)
+            
+        # 3. Fetch Items
+        items = db.execute('''
+            SELECT bi.*, pm.name 
+            FROM bill_items bi 
+            JOIN puja_master pm ON bi.puja_id = pm.id 
+            WHERE bi.bill_id = ?
+        ''', (bill['id'],)).fetchall()
+        
+        # 4. Fetch Settings
+        settings_row = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+        if not settings_row:
+             return {'status': 'error', 'message': 'Settings not found'}
+        settings = dict(settings_row)
+
+        
+        # 5. Prepare Data
+        import datetime
+        from flask import render_template_string
+        from datetime import datetime as dt, timezone
+        
+        # Date Formatting Helper
+        def format_ts(ts):
+            if not ts: return ""
+            try:
+                if isinstance(ts, str):
+                    clean_ts = ts.split('.')[0]
+                    if 'T' in clean_ts:
+                         ts_obj = dt.strptime(clean_ts, '%Y-%m-%dT%H:%M:%S')
+                    else:
+                         ts_obj = dt.strptime(clean_ts, '%Y-%m-%d %H:%M:%S')
+                    # Assume IST
+                    local_ts = ts_obj.replace(tzinfo=IST)
+                    return format_ist_datetime(local_ts, '%d-%m-%Y %H:%M')
+            except:
+                return str(ts)
+            return str(ts)
+
+
+        timestamp = format_ts(bill['created_at'])
+        
+        # Scheduled Date Formatting
+        scheduled_date = bill['scheduled_date']
+        s_date_str = None
+        if scheduled_date:
+            try:
+                 if isinstance(scheduled_date, str):
+                     s_date_str = dt.strptime(scheduled_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                 elif hasattr(scheduled_date, 'strftime'):
+                     s_date_str = scheduled_date.strftime('%d-%m-%Y')
+            except:
+                 s_date_str = str(scheduled_date)
+
+        # Star Translation
+        star_map = {s['eng']: s['mal'] for s in STARS}
+        star_disp = star_map.get(bill['star'], bill['star'])
+
+        # Item List for Template/Text
+        line_items = []
+        for item in items:
+            line_items.append({
+                'name': item['name'],
+                'count': item['count'],
+                'total': item['total']
+            })
+
+        # --- BRANCH BASED ON PRINTER TYPE ---
+
+        if printer_name == 'WEB_BROWSER_PRINT':
+            # WEB PRINT
+            slip_data = {
+                'bill_no': bill['bill_no'],
+                'devotee_name': bill['devotee_name'],
+                'star': star_disp,
+                'scheduled_date': s_date_str,
+                'line_items': line_items,
+                'total': bill['total_amount']
+            }
+            
+            template_content = settings['print_template_content']
+            if not template_content:
+                template_content = "<h1>Error: Print Template Missing</h1>"
+                
+            html_content = render_template_string(template_content, 
+                                         slips=[slip_data], 
+                                         settings=settings, 
+                                         timestamp=timestamp)
+                                         
+            return {'status': 'print_web', 'content': html_content}
+
+        else:
+            # PHYSICAL PRINT
+            try:
+                from modules.printers import printer_manager
+                
+                header_txt = f"{settings['name_mal']}\n{settings['name_eng']}\n"
+                footer_txt = f"\n{settings['receipt_footer']}\n"
+                
+                # Construct Slip Text
+                slip = f"{header_txt}\n"
+                slip += f"REPRINT\n"
+                slip += f"Bill: {bill['bill_no']} | {timestamp}\n"
+                
+                if s_date_str:
+                    slip += f"Vazhipadu Date: {s_date_str}\n"
+
+                d_name = bill['devotee_name'] or "N/A"
+                if star_disp != bill['star']: # If translated
+                    slip += f"Name: {d_name}\nStar: {star_disp} ({bill['star']})\n"
+                else:
+                    slip += f"Name: {d_name}  Star: {bill['star']}\n"
+                    
+                slip += "--------------------------------\n"
+                for item in line_items:
+                    slip += f"{item['name']}\n"
+                    # Handle float formatting for count/total if needed
+                    qty = item['count']
+                    amt = item['total']
+                    slip += f"Qty: {qty}  Amt: {amt:.2f}\n"
+                slip += "--------------------------------\n"
+                slip += f"Total: {bill['total_amount']:.2f}\n"
+                slip += f"{footer_txt}"
+                
+                # Cut Command
+                slip += "\n\n\n\x1dV\x00"
+                
+                printer_manager.print_text(printer_name, slip)
+                
+                return {'status': 'success', 'message': f'Reprint sent to {printer_name}'}
+                
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                import logging
+                logging.error(f"Printer Error: {e}", exc_info=True)
+                return {'status': 'error', 'message': 'Printer Error. Please check the logs.'}
+        
+    except Exception as e:
+        import traceback
+        import logging
+        logging.error(f"Print Bill Action Failed: {e}", exc_info=True)
+        traceback.print_exc()
+        return {'status': 'error', 'message': 'An error occurred while printing. Check logs.'}
