@@ -3,16 +3,25 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.4"
+__version__ = "1.5.5"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 4,
+    "patch": 5,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.5",
+        "date": "2026-01-21",
+        "changes": [
+            "Critical Fix: Resolved file corruption during Admin Update on Windows",
+            "Critical Fix: Manager.py now auto-restarts server after update",
+            "Enhancement: Server auto-installs all dependencies if missing (Flask, etc.)"
+        ]
+    },
     {
         "version": "1.5.4",
         "date": "2026-01-21",
