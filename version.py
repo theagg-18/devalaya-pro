@@ -3,16 +3,23 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.5"
+__version__ = "1.5.6"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 5,
+    "patch": 6,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.6",
+        "date": "2026-01-21",
+        "changes": [
+            "Hotfix: Fixed infinite install loop in Manager when shortcut dependencies fail to import"
+        ]
+    },
     {
         "version": "1.5.5",
         "date": "2026-01-21",
