@@ -3,16 +3,25 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.3"
+__version__ = "1.5.4"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 3,
+    "patch": 4,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.4",
+        "date": "2026-01-21",
+        "changes": [
+            "Hotfix: Resolved 'psutil' missing dependency crash in Manager",
+            "Server: Added error trap to 'run_prod.py' to keep window open on startup failure",
+            "System: Verified portability and fallback mechanisms for source distribution"
+        ]
+    },
     {
         "version": "1.5.3",
         "date": "2026-01-21",

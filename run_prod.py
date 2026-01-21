@@ -44,4 +44,13 @@ def start_production():
         subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
 
 if __name__ == "__main__":
-    start_production()
+    try:
+        start_production()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print("\n[!] Server failed to start.")
+        try:
+            input("Press Enter to exit...")
+        except EOFError:
+            pass
