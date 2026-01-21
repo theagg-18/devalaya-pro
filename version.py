@@ -3,16 +3,24 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.6"
+__version__ = "1.5.7"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 6,
+    "patch": 7,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.7",
+        "date": "2026-01-21",
+        "changes": [
+            "Feature: Added Offline Installation Support (Local packages/ folder)",
+            "Enhancement: run_prod.py and manager.py now prefer local packages if present"
+        ]
+    },
     {
         "version": "1.5.6",
         "date": "2026-01-21",
