@@ -146,14 +146,46 @@ def run_migrations():
         except subprocess.CalledProcessError as e:
             print(f"[-] Error running {f}: {e}")
 
-def update_system():
+def start_production_server():
+    print("Starting Production Server...")
+    # Get python executable (use current sys.executable)
+    python_exe = sys.executable
+    
+    if platform.system() == 'Windows':
+            subprocess.Popen([python_exe, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+    else:
+            subprocess.Popen([python_exe, "run_prod.py"], start_new_session=True)
+    time.sleep(2)
+
+def stop_server(proc):
+    print("Stopping server...")
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except psutil.TimeoutExpired:
+        proc.kill()
+    print("Server stopped.")
+
+def update_system(silent=False):
     print("\n--- UPDATE SYSTEM ---")
+    
+    # Check if server is running
+    proc = get_server_process()
+    was_running = False
+    if proc:
+        print("[!] Server is currently running. It will be stopped for the update.")
+        stop_server(proc)
+        was_running = True
+        time.sleep(1)
     
     # 1. Offline Update
     update_zip_path = os.path.join(BASE_DIR, UPDATE_ZIP_NAME)
     if os.path.exists(update_zip_path):
         print(f"[!] Found {UPDATE_ZIP_NAME}. Detected Offline Update.")
-        choice = input("Do you want to install this update? (y/n): ").lower()
+        if silent:
+            choice = 'y'
+        else:
+            choice = input("Do you want to install this update? (y/n): ").lower()
         if choice == 'y':
             print("Extracting update...")
             try:
@@ -301,6 +333,11 @@ def update_system():
     # 3. Post-Update Tasks
     install_dependencies()
     run_migrations()
+    
+    if was_running:
+        print("\n[+] Restarting Server...")
+        start_production_server()
+        
     print("\n[SUCCESS] Update process completed.")
 
 def get_server_process():
@@ -359,12 +396,7 @@ def server_control():
             if proc:
                 print("Server is already running!")
             else:
-                print("Starting Production Server...")
-                if platform.system() == 'Windows':
-                     subprocess.Popen([sys.executable, "run_prod.py"], creationflags=subprocess.CREATE_NEW_CONSOLE)
-                else:
-                     subprocess.Popen([sys.executable, "run_prod.py"], start_new_session=True)
-                time.sleep(2)
+                start_production_server()
         
         elif choice == '2':
              if proc:
@@ -383,13 +415,7 @@ def server_control():
 
         elif choice == '3':
             if proc:
-                print("Stopping server...")
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except psutil.TimeoutExpired:
-                    proc.kill()
-                print("Server stopped.")
+                stop_server(proc)
             else:
                 print("Server is not running.")
             time.sleep(1)
@@ -475,7 +501,10 @@ def main_menu():
 
 if __name__ == "__main__":
     try:
-        main_menu()
+        if len(sys.argv) > 1 and sys.argv[1] == '--update':
+            update_system(silent=True)
+        else:
+            main_menu()
     except KeyboardInterrupt:
         print("\nExiting...")
         sys.exit()

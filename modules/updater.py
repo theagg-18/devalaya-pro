@@ -100,89 +100,35 @@ def perform_update(update_source, is_url=True):
             # Local file copy
             shutil.copy(update_source, zip_path)
             
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(TEMP_DIR)
-            
-        # Handle GitHub archives usually having a root folder
-        extracted_items = os.listdir(TEMP_DIR)
-        if len(extracted_items) == 1 and os.path.isdir(os.path.join(TEMP_DIR, extracted_items[0])):
-            # Move content up
-            root_folder = os.path.join(TEMP_DIR, extracted_items[0])
-            for item in os.listdir(root_folder):
-                shutil.move(os.path.join(root_folder, item), TEMP_DIR)
-            os.rmdir(root_folder)
-            
-        # STEP 4: Validation
-        UPDATE_STATUS = "Step 4/7: Validating Update..."
-        required_files = ['app.py', 'database.py', 'version.py']
-        for f in required_files:
-            if not os.path.exists(os.path.join(TEMP_DIR, f)):
-                raise Exception(f"Validation Failed: {f} missing in update")
+        # STEP 4: Validation (Basic Zip Check)
+        UPDATE_STATUS = "Step 4/6: Validating Update Package..."
+        if not zipfile.is_zipfile(zip_path):
+             raise Exception("Invalid Update Package (Not a Zip)")
+             
+        # STEP 5: Spawn Manager for Atomic Update
+        UPDATE_STATUS = "Step 5/6: Handing over to Update Manager..."
         
-        # Test compile
-        try:
-            import compileall
-            if not compileall.compile_dir(TEMP_DIR, quiet=1):
-                raise Exception("Python syntax check failed")
-        except Exception as e:
-            raise Exception(f"Code validation failed: {e}")
-            
-        # STEP 5: Apply Update (Atomic Switch)
-        UPDATE_STATUS = "Step 5/7: Switching Versions..."
+        # We need to spawn manager.py --update
+        # This new process will:
+        # 1. Stop this server
+        # 2. Extract the update
+        # 3. Restart this server
         
-        # Safe Delete current files (keeping data)
-        for item in os.listdir(BASE_DIR):
-            if item in EXCLUDE_DIRS or item in EXCLUDE_FILES or item == 'updates':
-                continue
-            path = os.path.join(BASE_DIR, item)
-            if item == 'static':
-                # Special static handling to preserve uploads
-                for static_item in os.listdir(path):
-                    if static_item == 'uploads': continue
-                    p = os.path.join(path, static_item)
-                    if os.path.isdir(p): shutil.rmtree(p)
-                    else: os.remove(p)
-            elif os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                os.remove(path)
-                
-        # Move new files in
-        safe_copy_tree(TEMP_DIR, BASE_DIR)
-        
-        # Run Migrations (Optional but recommended here)
-        # Using subprocess to run manager commands or direct DB calls
-        
-        # STEP 6: Restart
-        UPDATE_STATUS = "Step 6/7: Restarting Service..."
-        MAINTENANCE_MODE = False # Will be reset by restart anyway
-        
-        # Trigger Restart
-        # Ensure we are passing the correct arguments
         python_executable = sys.executable
-        script_args = sys.argv[:]
+        manager_script = os.path.join(BASE_DIR, 'manager.py')
         
-        # If running as script, ensure absolute path
-        if script_args and script_args[0].endswith('.py'):
-            if not os.path.isabs(script_args[0]):
-                script_args[0] = os.path.abspath(script_args[0])
-
-        restart_args = [python_executable] + script_args
+        cmd = [python_executable, manager_script, '--update']
         
-        print(f"Restarting with args: {restart_args}")
+        print(f"Spawning Update Manager: {cmd}")
         
         if sys.platform == 'win32':
-            # Windows restart
-            # close_fds=True ensures the new process doesn't hang on to our open pipes (if any)
-            # CREATE_NEW_CONSOLE ensures it gets its own window if needed, or detaches
-            subprocess.Popen(restart_args, close_fds=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
-            # Give it a split second to spawn
-            time.sleep(0.5) 
-            os._exit(0)
+             subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)
         else:
-            # Unix exec
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-            
+             subprocess.Popen(cmd, start_new_session=True)
+             
+        UPDATE_STATUS = "Update Manager Started. Server will restart shortly."
+        MAINTENANCE_MODE = False 
+        
     except Exception as e:
         # Log full exception details server-side
         logging.error("Update failed, initiating rollback.", exc_info=True)

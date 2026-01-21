@@ -33,11 +33,19 @@ def start_production():
             print("Running with Waitress...")
             serve(app, host='0.0.0.0', port=5000)
         except ImportError:
-            print("Waitress not found. Installing...")
-            subprocess.run([sys.executable, "-m", "pip", "install", "waitress"])
-            from waitress import serve
-            from wsgi import app
-            serve(app, host='0.0.0.0', port=5000)
+            print("Missing dependencies detected (Waitress/Flask etc). Installing...")
+            try:
+                subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+                print("[+] Dependencies installed. Retrying...")
+                from waitress import serve
+                from wsgi import app
+                serve(app, host='0.0.0.0', port=5000)
+            except subprocess.CalledProcessError:
+                print("[-] Failed to install dependencies.")
+                raise
+            except ImportError:
+                print("[-] Dependencies installed but import failed. Please restart the application.")
+                raise
     else:
         print("Running with Gunicorn...")
         # For Linux/RPi, we use the config file we created
