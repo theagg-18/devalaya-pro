@@ -25,7 +25,17 @@ def print_header():
 
 def install_dependencies():
     print("\n[+] Installing dependencies...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+    packages_dir = os.path.join(BASE_DIR, "packages")
+    
+    cmd = [sys.executable, "-m", "pip", "install"]
+    
+    if os.path.exists(packages_dir) and os.listdir(packages_dir):
+        print(f"[*] Local packages found in {packages_dir}. Installing offline...")
+        cmd.extend(["--no-index", "--find-links", packages_dir])
+    
+    cmd.extend(["-r", REQUIREMENTS_FILE])
+    
+    subprocess.check_call(cmd)
     print("[+] Dependencies installed.")
 
 def create_shortcuts(retry=True):
@@ -69,7 +79,13 @@ def create_shortcuts(retry=True):
             if retry:
                 print("[-] pywin32 not found. Installing to create shortcuts...")
                 try:
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+                    cmd = [sys.executable, "-m", "pip", "install"]
+                    packages_dir = os.path.join(BASE_DIR, "packages")
+                    if os.path.exists(packages_dir) and os.listdir(packages_dir):
+                         cmd.extend(["--no-index", "--find-links", packages_dir])
+                    cmd.extend(["pywin32", "winshell"])
+                    
+                    subprocess.check_call(cmd)
                     print("[+] Dependencies installed. Retrying shortcut creation...")
                     create_shortcuts(retry=False)
                 except Exception as e:

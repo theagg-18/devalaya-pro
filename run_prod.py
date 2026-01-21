@@ -35,7 +35,17 @@ def start_production():
         except ImportError:
             print("Missing dependencies detected (Waitress/Flask etc). Installing...")
             try:
-                subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                packages_dir = os.path.join(base_dir, "packages")
+                
+                cmd = [sys.executable, "-m", "pip", "install"]
+                if os.path.exists(packages_dir) and os.listdir(packages_dir):
+                    print(f"[*] Local packages found. Installing offline...")
+                    cmd.extend(["--no-index", "--find-links", packages_dir])
+                
+                cmd.extend(["-r", "requirements.txt"])
+                
+                subprocess.run(cmd, check=True)
                 print("[+] Dependencies installed. Retrying...")
                 from waitress import serve
                 from wsgi import app
