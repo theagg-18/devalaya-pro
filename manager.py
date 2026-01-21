@@ -5,7 +5,7 @@ import shutil
 import zipfile
 import platform
 import time
-import psutil
+
 
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -304,6 +304,11 @@ def update_system():
     print("\n[SUCCESS] Update process completed.")
 
 def get_server_process():
+    try:
+        import psutil
+    except ImportError:
+        return None
+
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             # Check for python process running app.py or run_prod.py
@@ -316,6 +321,14 @@ def get_server_process():
     return None
 
 def server_control():
+    try:
+        import psutil
+    except ImportError:
+        print("\n[!] Error: 'psutil' module not found.")
+        print("    Please select '1. Install (Setup & Shortcuts)' from the main menu first.")
+        input("\nPress Enter to return to menu...")
+        return
+
     while True:
         clear_screen()
         print_header()
