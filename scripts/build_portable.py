@@ -16,8 +16,9 @@ PYTHON_DIR = os.path.join(DIST_DIR, "python")
 APP_DIR = os.path.join(DIST_DIR, "app")
 REQUIREMENTS_FILE = os.path.join(BASE_DIR, "requirements.txt")
 
-EXCLUDE_DIRS = {'.git', '.gemini', '__pycache__', 'dist', 'venv', 'env', '.venv', 'packages', 'updates', 'logs'}
-EXCLUDE_FILES = {'temple.db', '.env'}
+EXCLUDE_DIRS = {'.git', '.gemini', '__pycache__', 'dist', 'venv', 'env', '.venv', 'packages', 'updates', 'logs', 'fresh_copy', 'temp_fresh'}
+EXCLUDE_FILES = {'temple.db', '.env', '*.zip', 'create_final_zip.py', 'debug_checkout.log'}
+
 
 def download_file(url, dest):
     print(f"Downloading {url}...")
@@ -87,7 +88,9 @@ def build_portable():
     print("Copying Application Source...")
     os.makedirs(APP_DIR)
     for item in os.listdir(BASE_DIR):
-        if item in EXCLUDE_DIRS or item in EXCLUDE_FILES:
+        if item in EXCLUDE_DIRS:
+            continue
+        if item in EXCLUDE_FILES or item.endswith('.zip'):
             continue
         s = os.path.join(BASE_DIR, item)
         d = os.path.join(APP_DIR, item)

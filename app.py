@@ -7,8 +7,23 @@ from routes.cashier import cashier_bp
 from utils.timezone_utils import now_ist
 from version import get_version, get_version_display
 import os
+import sys
 
-app = Flask(__name__)
+# Ensure the script's directory is in sys.path.
+# This is required for embedded Python distributions which might not add the CWD/Script dir by default.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# Determine base directory for static and template files
+basedir = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(__name__, 
+            static_folder=os.path.join(basedir, 'static'),
+            template_folder=os.path.join(basedir, 'templates'))
+
+
+
 app.config.from_object(Config)
 
 # Configure Logging

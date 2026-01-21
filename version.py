@@ -3,16 +3,25 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.8"
+__version__ = "1.5.9"
 __version_info__ = {
     "major": 1,
     "minor": 5,
-    "patch": 8,
+    "patch": 9,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.5.9",
+        "date": "2026-01-21",
+        "changes": [
+            "Critical Fix: Resolved 'ModuleNotFoundError: No module named wsgi' in portable environments",
+            "Fix: Explicitly configured static and template paths in app.py for reliable asset loading",
+            "Build: Optimized portable distribution by excluding temporary and backup files"
+        ]
+    },
     {
         "version": "1.5.8",
         "date": "2026-01-21",
