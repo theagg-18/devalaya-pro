@@ -2,3 +2,5 @@ waitress>=3.0.1
 psutil
 Werkzeug
 requests
+Flask
+python-dotenv

@@ -4,6 +4,12 @@ import subprocess
 import sys
 import socket
 
+# Ensure the script's directory is in sys.path.
+# This is required for embedded Python distributions which might not add the CWD/Script dir by default.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 def get_local_ip():
     try:
         # Connect to an external server to get the interface IP (doesn't send data)
