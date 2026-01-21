@@ -28,7 +28,7 @@ def install_dependencies():
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
     print("[+] Dependencies installed.")
 
-def create_shortcuts():
+def create_shortcuts(retry=True):
     system = platform.system()
     cwd = os.getcwd()
     
@@ -66,9 +66,16 @@ def create_shortcuts():
             print(f"Created: {path}")
             
         except ImportError:
-            print("[-] pywin32 not found. Installing to create shortcuts...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
-            create_shortcuts() # Retry
+            if retry:
+                print("[-] pywin32 not found. Installing to create shortcuts...")
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32", "winshell"])
+                    print("[+] Dependencies installed. Retrying shortcut creation...")
+                    create_shortcuts(retry=False)
+                except Exception as e:
+                    print(f"[-] Failed to install shortcut dependencies: {e}")
+            else:
+                 print("[-] pywin32 installed but import failed. Please restart manager to try again.")
         except Exception as e:
             print(f"[-] Failed to create shortcuts: {e}")
 
