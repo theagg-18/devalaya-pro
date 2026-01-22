@@ -27,7 +27,7 @@ def get_star():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': 'An internal error has occurred.'}), 500
 
 @utility_bp.route('/get-next-star-dates')
 def get_next_star_dates():
@@ -52,4 +52,4 @@ def get_next_star_dates():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': 'An internal error has occurred.'}), 500
