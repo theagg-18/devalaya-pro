@@ -1353,16 +1353,36 @@
 
     function renderRepDates() {
         const container = document.getElementById('repDateList');
+        container.innerHTML = '';
         if (REPLICATE_DATES.length === 0) {
-            container.innerHTML = '<span class="text-muted" style="font-size: 0.8rem; padding: 1rem; width: 100%; text-align: center;">No dates selected</span>';
+            const emptySpan = document.createElement('span');
+            emptySpan.className = 'text-muted';
+            emptySpan.style.fontSize = '0.8rem';
+            emptySpan.style.padding = '1rem';
+            emptySpan.style.width = '100%';
+            emptySpan.style.textAlign = 'center';
+            emptySpan.textContent = 'No dates selected';
+            container.appendChild(emptySpan);
             return;
         }
-        container.innerHTML = REPLICATE_DATES.map(d => `
-            <div class="date-chip">
-                <span>${formatDate(d)}</span>
-                <button onclick="removeRepDate('${d}')">&times;</button>
-            </div>
-        `).join('');
+        REPLICATE_DATES.forEach(function (d) {
+            const dateChip = document.createElement('div');
+            dateChip.className = 'date-chip';
+
+            const span = document.createElement('span');
+            span.textContent = formatDate(d);
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = '\u00D7';
+            button.addEventListener('click', function () {
+                removeRepDate(d);
+            });
+
+            dateChip.appendChild(span);
+            dateChip.appendChild(button);
+            container.appendChild(dateChip);
+        });
     }
 
     function formatDate(isoStr) {
