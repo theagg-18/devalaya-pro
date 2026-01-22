@@ -126,3 +126,9 @@ test_*.py
 
 # User Uploads (Privacy)
 static/uploads/
+
+# Update System Artifacts
+updates/
+fresh_copy/
+temp_fresh/
+Devalaya_Portable_Final.zip

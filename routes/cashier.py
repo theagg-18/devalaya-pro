@@ -101,29 +101,54 @@ def history():
     db = get_db()
     query = request.args.get('q', '')
     
-    sql = "SELECT * FROM bills WHERE cashier_id = ? AND status != 'draft'"
-    params = [g.user['id']]
+    # Updated to allow all admins/cashiers to view history if needed?
+    # User said "pending payment list should be visible to all cashiers and admins"
+    # The dedicated route /pending-payments does that.
+    # But for 'history' route, currently it filters by cashier_id.
+    # "pending payment list filter dont consider the date" - likely refers to THIS view if they use filter.
+    # If they want *global* view in history, we might need to relax cashier_id check if pending?
+    # But usually 'history' implies 'my history'.
+    # The user said "pending payment list should be visible to all cashiers... anyone can edit".
+    # This implies there should be a GLOBAL list.
+    # The /pending-payments route IS global (it lacks cashier_id filter).
+    # But if they use the History page with "Pending" filter, they might expect global too.
+    # Let's adjust: IF payment_status == 'pending', remove cashier_id constraint?
+    
+    if request.args.get('payment_status') == 'pending':
+        sql = "SELECT b.*, u.username as receiver_name FROM bills b LEFT JOIN users u ON b.payment_received_by = u.id WHERE b.status != 'draft'"
+        params = []
+    else:
+        sql = "SELECT b.*, u.username as receiver_name FROM bills b LEFT JOIN users u ON b.payment_received_by = u.id WHERE b.cashier_id = ? AND b.status != 'draft'"
+        params = [g.user['id']]
     
     # Date Filter Logic (Same as Admin Reports)
     date_filter = request.args.get('date')
+    payment_status_filter = request.args.get('payment_status', 'all')
+    
+    if payment_status_filter != 'all':
+         sql += " AND b.payment_status = ?"
+         params.append(payment_status_filter)
     
     if query:
         # Search by Bill No or Devotee Name (Global Search)
-        sql += ' AND (bill_no LIKE ? OR devotee_name LIKE ?)'
+        sql += ' AND (b.bill_no LIKE ? OR b.devotee_name LIKE ?)'
         wildcard = f'%{query}%'
         params.extend([wildcard, wildcard])
         
         # Explicitly clear date filter so UI shows we searched everywhere
         date_filter = ''
     else:
-        if date_filter:
-            sql += ' AND date(created_at) = ?'
+        if payment_status_filter == 'pending':
+            # Skip date filter entirely to show all pending
+            date_filter = ''
+        elif date_filter:
+            sql += ' AND date(b.created_at) = ?'
             params.append(date_filter)
         else:
             # Default to today
             import datetime
             today = datetime.date.today().isoformat()
-            sql += ' AND date(created_at) = ?'
+            sql += ' AND date(b.created_at) = ?'
             params.append(today)
             date_filter = today
 
@@ -139,10 +164,11 @@ def history():
     total_pages = (total_records + per_page - 1) // per_page
     
     # 2. Get Paginated Records
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?'
     params.extend([per_page, offset])
     
     bills = db.execute(sql, params).fetchall()
+
     
     # Fetch items for each bill
     bill_list = []
@@ -204,7 +230,68 @@ def history():
         bill_list.append(b_dict)
     
     return render_template('cashier/history.html', bills=bill_list, query=query, date_filter=date_filter,
+                           payment_status=payment_status_filter,
                            current_page=page, total_pages=total_pages)
+
+@cashier_bp.route('/pending-payments')
+@login_required
+def pending_payments():
+    db = get_db()
+    
+    # Fetch all pending bills
+    # Fetch all pending bills (exclude cancelled)
+    bills = db.execute("SELECT * FROM bills WHERE payment_status = 'pending' AND status != 'cancelled' ORDER BY created_at DESC").fetchall()
+    
+    # Calculate total pending
+    total_pending = sum(b['total_amount'] for b in bills)
+    
+    return render_template('cashier/pending_payments.html', bills=bills, total_pending=total_pending)
+
+@cashier_bp.route('/mark-paid/<int:bill_id>', methods=['POST'])
+@login_required
+def mark_paid(bill_id):
+    db = get_db()
+    
+    # Check if bill is cancelled
+    bill = db.execute("SELECT status FROM bills WHERE id = ?", (bill_id,)).fetchone()
+    if not bill:
+        return {'status': 'error', 'message': 'Bill not found'}, 404
+        
+    
+    if bill['status'] == 'cancelled':
+        return {'status': 'error', 'message': 'Cannot mark cancelled bill as paid'}
+        
+    # Record who received payment and DATE
+    # We use CURRENT_TIMESTAMP or python generated. Using helper for IST consistency
+    pay_date = get_ist_timestamp()
+    db.execute("UPDATE bills SET payment_status = 'paid', payment_received_by = ?, payment_date = ? WHERE id = ?", (g.user['id'], pay_date, bill_id))
+    db.commit()
+    return {'status': 'success'}
+
+@cashier_bp.route('/billing/update-status', methods=['POST'])
+@login_required
+def update_bill_status():
+    data = request.json
+    bill_no = data.get('bill_no')
+    status = data.get('status') # 'paid' or 'pending'
+    phone = data.get('phone')
+    
+    if not bill_no or not status:
+        return {'status': 'error', 'message': 'Missing parameters'}
+        
+    db = get_db()
+    
+    if status == 'pending':
+        # Update phone if provided
+        db.execute("UPDATE bills SET payment_status = ?, phone = ? WHERE bill_no = ?", (status, phone, bill_no))
+    else:
+        # If paid, record who received it AND DATE
+        pay_date = get_ist_timestamp()
+        db.execute("UPDATE bills SET payment_status = ?, payment_received_by = ?, payment_date = ? WHERE bill_no = ?", (status, g.user['id'], pay_date, bill_no))
+        
+    db.commit()
+
+    return {'status': 'success'}
 
 @cashier_bp.route('/billing/unified')
 @login_required
@@ -359,6 +446,13 @@ def update_cart():
 
     return {'status': 'success', 'cart': safe_cart}
 
+@cashier_bp.route('/billing/batch/clear', methods=['POST'])
+@login_required
+def clear_batch():
+    session.pop('batch', None)
+    session.modified = True
+    return {'status': 'success'}
+
 @cashier_bp.route('/billing/batch/add', methods=['POST'])
 @login_required
 def add_to_batch():
@@ -393,11 +487,7 @@ def add_to_batch():
     
     return {'status': 'success', 'batch_count': len(batch)}
 
-@cashier_bp.route('/billing/batch/clear', methods=['POST'])
-@login_required
-def clear_batch():
-    session.pop('batch', None)
-    return {'status': 'success'}
+
 
 @cashier_bp.route('/billing/batch/recall', methods=['POST'])
 @login_required
@@ -486,6 +576,12 @@ def checkout():
             scheduled_date = bill_data.get('scheduled_date')
             total_amount = bill_data['total']
             
+            # If batch has explicit pay later flag, use it? Or individual?
+            # Assuming individual bill data carries it or we propagate from request if global
+            if data.get('payment_status'):
+                bill_data['payment_status'] = data.get('payment_status')
+                bill_data['phone'] = data.get('phone')
+            
             # RETRY LOOP for Safe Concurrent Numbering
             # We try up to 5 times to get a unique slot
             max_retries = 5
@@ -507,7 +603,17 @@ def checkout():
                     # between the SELECT and INSERT/UPDATE.
                     
                     status = 'printed' 
+                    # Default to PENDING for new flow, unless explicitly paid (should typically be pending until confirmed)
+                    # However, to avoid breaking existing flow where print=done, we might need 'paid'.
+                    # User requested "Payment Received" button in overlay.
+                    # Best approach: Create as PENDING. Overlay allows "Received" or "Pay Later".
+                    payment_status = bill_data.get('payment_status', 'pending') 
+                    
+                    phone = bill_data.get('phone')
                     ist_timestamp = get_ist_timestamp()
+                    
+                    # If creating as PAID immediately (e.g. from some other flow or future logic), set payment_date
+                    payment_date = ist_timestamp if payment_status == 'paid' else None
 
                     original_bill_id = bill_data.get('original_bill_id')
                     remarks = "Edited Bill Correction" if original_bill_id else None
@@ -517,9 +623,9 @@ def checkout():
                         # Optimistically try to set the new bill_no
                         db.execute(
                             '''UPDATE bills SET 
-                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?, original_bill_id=?, remarks=?
+                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?, original_bill_id=?, remarks=?, payment_status=?, phone=?, payment_date=?
                                WHERE id=?''', 
-                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, original_bill_id, remarks, draft_id)
+                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, original_bill_id, remarks, payment_status, phone, payment_date, draft_id)
                         )
                         bill_id = draft_id
                         
@@ -533,9 +639,9 @@ def checkout():
                         # Create NEW Bill
                         # We include bill_no here to trigger UNIQUE constraint immediately
                         cur = db.execute(
-                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at, original_bill_id, remarks)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp, original_bill_id, remarks)
+                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at, original_bill_id, remarks, payment_status, phone, payment_date)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp, original_bill_id, remarks, payment_status, phone, payment_date)
                         )
                         bill_id = cur.lastrowid
                     
@@ -831,7 +937,13 @@ def checkout():
             if is_batch: session.pop('batch', None)
             else: session.pop('cart', None)
                 
-            return {'status': 'print_web', 'content': html_content}
+            total_amount_collected = sum(b['total'] for b in items_to_process)
+            return {
+                'status': 'print_web', 
+                'content': html_content,
+                'bill_no': bill_ids[0] if bill_ids else None,
+                'total_amount': total_amount_collected
+            }
 
         # Physical Printer
         # Join with Cut Commands
@@ -848,7 +960,8 @@ def checkout():
         else:
             session.pop('cart', None)
         
-        return {'status': 'success'}
+        total_amount_collected = sum(b['total'] for b in items_to_process)
+        return {'status': 'success', 'bill_no': bill_ids[0] if bill_ids else None, 'total_amount': total_amount_collected}
         
     except Exception as e:
         import traceback
@@ -1051,7 +1164,7 @@ def cancel_bill(bill_id):
     # We allow cashiers to cancel for now.
     
     try:
-        db.execute('UPDATE bills SET status=?, remarks=? WHERE id=?', ('cancelled', reason, bill_id))
+        db.execute('UPDATE bills SET status=?, payment_status=?, remarks=? WHERE id=?', ('cancelled', 'cancelled', reason, bill_id))
         db.commit()
         return {'status': 'success'}
     except Exception as e:
@@ -1086,7 +1199,7 @@ def edit_bill(bill_id):
     try:
         # 2. Cancel Old Bill
         cancel_remarks = f"Corrected/Edited: {reason}"
-        db.execute('UPDATE bills SET status=?, remarks=? WHERE id=?', ('cancelled', cancel_remarks, bill_id))
+        db.execute('UPDATE bills SET status=?, payment_status=?, remarks=? WHERE id=?', ('cancelled', 'cancelled', cancel_remarks, bill_id))
         
         # 3. Populate Cart
         cart_items = []

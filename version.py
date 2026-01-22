@@ -3,16 +3,28 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.5.9"
+__version__ = "1.6.0"
 __version_info__ = {
     "major": 1,
-    "minor": 5,
-    "patch": 9,
+    "minor": 6,
+    "patch": 0,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.6.0",
+        "date": "2026-01-22",
+        "changes": [
+            "Feature: Built-in Malayalam Calendar & Offline Star Calculation",
+            "Feature: Star Finder & One-Click Yearly Replication",
+            "Enhancement: Total Amount display in Print Overlay",
+            "Enhancement: 'Clear All' button for batch billing",
+            "Security: Fixed 'Pay Later' loophole ensuring immediate payment status confirmation",
+            "Enhancement: Persistent billing overlay survives page refreshes"
+        ]
+    },
     {
         "version": "1.5.9",
         "date": "2026-01-21",

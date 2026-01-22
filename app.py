@@ -49,6 +49,9 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(cashier_bp)
 
+from routes.utility import utility_bp
+app.register_blueprint(utility_bp)
+
 @app.route('/health')
 def health_check():
     return 'OK', 200

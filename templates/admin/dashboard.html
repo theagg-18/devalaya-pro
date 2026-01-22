@@ -6,8 +6,20 @@
         <h2>Admin Dashboard</h2>
         <p>Overview of temple performance and statistics.</p>
     </div>
-    <div class="date-display">
-        {{ now }}
+    <div class="date-display" style="text-align: right; color: #334155;">
+        <div style="font-size: 1.1em; font-weight: 600;">{{ now }}</div>
+
+        {% if today_mal_date_str %}
+        <div style="font-size: 0.9em; margin-top: 4px; color: #475569;">
+            🗓️ {{ today_mal_date_str }}
+        </div>
+        {% endif %}
+
+        {% if today_star %}
+        <div style="font-size: 0.9em; margin-top: 4px; color: #b45309; font-weight: 500;">
+            ⭐ {{ today_star.mal }} ({{ today_star.eng }})
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -27,6 +39,14 @@
             <p class="stat-value">₹ {{ "%.2f"|format(month_total) }}</p>
         </div>
     </div>
+    <a href="{{ url_for('cashier.pending_payments') }}" class="stat-card"
+        style="text-decoration: none; color: inherit; cursor: pointer;">
+        <div class="stat-icon" style="background: #fef3c7; color: #b45309;">⏳</div>
+        <div class="stat-details">
+            <h3 style="margin: 0; font-size: 14px; color: #666;">Pending Payments</h3>
+            <p class="stat-value" style="color: #b45309;">₹ {{ "%.2f"|format(pending_total) }}</p>
+        </div>
+    </a>
 </div>
 
 <!-- Charts Section -->

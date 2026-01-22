@@ -103,8 +103,20 @@
 
             <div class="form-group" style="margin-bottom: 0;">
                 <label for="scheduledDate" style="font-size: 0.85rem;">Vazhipadu Date</label>
-                <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}" onchange="updateDetails()"
-                    style="font-size: 0.9rem; padding: 6px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}"
+                        onchange="updateDetails(); fetchStarForDate()"
+                        style="font-size: 0.9rem; padding: 6px; flex: 1;">
+
+                    <div id="dateStarBadge" title="Star of this day"
+                        style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; flex: 0 0 auto; display: none;">
+                    </div>
+
+                    <button type="button" onclick="openStarFinder()" title="Find Next Star Date"
+                        style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                        📅
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -218,7 +230,14 @@
         style="width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; margin: 0;">
         <div
             style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; font-size: 1.25rem;">Current Batch ({{ batch|length }})</h3>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <h3 style="margin: 0; font-size: 1.25rem;">Batch ({{ batch|length }})</h3>
+                {% if batch|length > 0 %}
+                <button onclick="clearBatch()"
+                    style="font-size: 0.8rem; color: #ef4444; border: 1px solid #ef4444; background: #fef2f2; padding: 2px 8px; border-radius: 4px; cursor: pointer;">Clear
+                    All</button>
+                {% endif %}
+            </div>
             <button onclick="document.getElementById('batchModal').style.display='none'"
                 style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
         </div>
@@ -750,6 +769,24 @@
         document.getElementById('printDialog').style.display = 'flex';
     }
 
+
+
+    async function clearBatch() {
+        if (!confirm("Are you sure you want to clear the ENTIRE batch?")) return;
+
+        try {
+            const res = await api('/cashier/billing/batch/clear', {});
+            if (res.status === 'success') {
+                location.reload();
+            } else {
+                alert("Error clearing batch.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error clearing batch.");
+        }
+    }
+
     async function processUnifiedPrint() {
         if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
             alert("Cart is empty.");
@@ -760,6 +797,20 @@
         if (!validation.valid) {
             alert(validation.msg);
             return;
+        }
+
+        const isPayLater = document.getElementById('payLaterCheck')?.checked;
+        if (isPayLater) {
+            const phone = document.getElementById('devPhone').value.trim();
+            const name = document.getElementById('devName').value.trim();
+            if (!name) {
+                alert("Name is required for Pay Later bills.");
+                return;
+            }
+            if (!phone || phone.length < 10) {
+                alert("Valid Phone Number is required for Pay Later bills.");
+                return;
+            }
         }
 
         processDirectPrint();
@@ -869,6 +920,84 @@
         btn.disabled = false;
     }
 
+    const PENDING_BILL_KEY = 'devalaya_pending_bill';
+
+    function showPaymentOverlay(billNo, totalAmount) {
+        // Remove existing if any
+        const existing = document.getElementById('paymentOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'paymentOverlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.background = 'rgba(0,0,0,0.9)'; // Darker
+        overlay.style.zIndex = '3000'; // Above everything
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.color = 'white';
+        // Block interactions
+        overlay.style.pointerEvents = 'auto'; // Capture clicks
+
+        overlay.innerHTML = `
+            <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <h2 style="margin-bottom: 0.5rem; color: #1e293b;">Payment Confirmation</h2>
+                <h3 style="margin: 0 0 1rem 0; color: #d97706; font-size: 2rem; font-weight: 800;">Collect: ₹${parseFloat(totalAmount).toFixed(0)}</h3>
+                <p style="margin-bottom: 2rem; color: #64748b;">Bill No: <strong>${billNo}</strong><br>Please confirm payment status to proceed.</p>
+                
+                <div id="actionButtons" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <button onclick="markPaid('${billNo}')" 
+                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
+                        💵 Payment Received
+                    </button>
+                    <button onclick="markPayLater('${billNo}')" 
+                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
+                        ⏳ Pay Later
+                    </button>
+                </div>
+
+                <!-- Hidden Pay Later Form -->
+                <div id="payLaterForm" style="display: none; flex-direction: column; gap: 1rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px; width: 100%; text-align: left; border: 1px solid #e2e8f0;">
+                    <h3 style="color: #1e293b; margin: 0; font-size: 1.1rem;">Enter Booking Devote's phone number</h3>
+                    <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Phone number is mandatory for Pay Later.</p>
+                    <input type="hidden" id="plBillNo">
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+                        <input type="number" id="plPhone" placeholder="10-digit Mobile Number" 
+                            style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem;">
+                    </div>
+                    <div style="display: flex; gap: 1rem; width: 100%;">
+                        <button onclick="cancelPayLater()" 
+                            style="flex: 1; padding: 0.75rem; background: #94a3b8; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button onclick="submitPayLater()" 
+                            style="flex: 1; padding: 0.75rem; background: #ea580c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            Confirm
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                    <button onclick="reprintLast()" style="background: none; border: none; color: #3b82f6; cursor: pointer; text-decoration: underline; font-size: 0.95rem;">
+                        Reprint Receipt
+                    </button>
+                     <button onclick="location.reload()" style="background: none; border: none; color: #94a3b8; cursor: pointer; text-decoration: underline; font-size: 0.95rem; display: none;">
+                        Refresh (Emergency)
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Trap focus or scroll lock if possible
+        document.body.style.overflow = 'hidden';
+    }
+
     async function processDirectPrint() {
         // Use a more robust selector or ID if possible, but fallback to searching by text if onclick matches exact string
         // The error happens because querySelector returns null.
@@ -896,36 +1025,20 @@
                 // Store content for reprint
                 lastPrintContent = res.content;
 
+                // PERSISTENT LOCK: Save to localStorage
+                localStorage.setItem(PENDING_BILL_KEY, JSON.stringify({
+                    billNo: res.bill_no,
+                    totalAmount: res.total_amount,
+                    content: res.content,
+                    timestamp: Date.now()
+                }));
+
                 // Use Iframe to bypass popup blockers
                 printContentInIframe(res.content);
 
-                // Show confirmation overlay instead of auto-reloading
-                const overlay = document.createElement('div');
-                overlay.style.position = 'fixed';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.height = '100%';
-                overlay.style.background = 'rgba(0,0,0,0.8)';
-                overlay.style.zIndex = '2000'; // Above everything
-                overlay.style.display = 'flex';
-                overlay.style.flexDirection = 'column';
-                overlay.style.justifyContent = 'center';
-                overlay.style.alignItems = 'center';
-                overlay.style.color = 'white';
-                overlay.innerHTML = `
-                    <h2 style="margin-bottom: 1rem; color: white;">Printing...</h2>
-                    <p style="margin-bottom: 2rem; color: white;">Please finish printing in the system dialog.</p>
-                    <div style="display: flex; gap: 1rem;">
-                        <button onclick="reprintLast()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Reprint
-                        </button>
-                        <button onclick="location.reload()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Done / Start New Bill
-                        </button>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
+                // Show confirmation overlay
+                showPaymentOverlay(res.bill_no, res.total_amount);
+
             } else {
                 alert("Error: " + res.message);
                 btn.innerText = 'Print Receipt';
@@ -1320,5 +1433,327 @@
             if (res) res.classList.remove('active');
         }
     });
+
+    // --- RESTORE PENDING PAYMENT OVERLAY ---
+    const pendingBill = JSON.parse(localStorage.getItem(PENDING_BILL_KEY));
+    if (pendingBill) {
+        console.log("Restoring pending bill overlay for:", pendingBill.billNo);
+        lastPrintContent = pendingBill.content;
+        showPaymentOverlay(pendingBill.billNo, pendingBill.totalAmount);
+    }
+
+    async function markPaid(billNo) {
+        try {
+            const res = await api('/cashier/billing/update-status', {
+                bill_no: billNo,
+                status: 'paid'
+            });
+            if (res.status === 'success') {
+                localStorage.removeItem(PENDING_BILL_KEY); // Clear lock
+                location.reload();
+            } else {
+                alert("Error: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error updating status");
+        }
+    }
+
+    function markPayLater(billNo) {
+        // Hide buttons, show form
+        document.getElementById('actionButtons').style.display = 'none';
+        document.getElementById('payLaterForm').style.display = 'flex';
+        document.getElementById('plBillNo').value = billNo;
+        document.getElementById('plPhone').focus();
+    }
+
+    function cancelPayLater() {
+        // Show buttons, hide form
+        document.getElementById('actionButtons').style.display = 'flex';
+        document.getElementById('payLaterForm').style.display = 'none';
+    }
+
+    async function submitPayLater() {
+        const billNo = document.getElementById('plBillNo').value;
+        const phone = document.getElementById('plPhone').value.trim();
+
+        // Validation Rule: 10 Digits
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phone)) {
+            alert("Please enter a valid 10-digit phone number.");
+            return;
+        }
+
+        try {
+            const res = await api('/cashier/billing/update-status', {
+                bill_no: billNo,
+                status: 'pending',
+                phone: phone
+            });
+            if (res.status === 'success') {
+                localStorage.removeItem(PENDING_BILL_KEY); // Clear lock
+                location.reload();
+            } else {
+                alert("Error: " + res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error updating status");
+        }
+    }
+
+
+    // No togglePayLater needed as sidebar inputs removed
+
+
+
+</script>
+
+<!-- Star Finder Modal -->
+<div id="starFinderModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1100; justify-content: center; align-items: center;">
+    <div class="card" style="width: 350px; padding: 0;">
+        <div
+            style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.1rem;">Find Next Star Date</h3>
+            <button onclick="closeStarFinder()"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div style="padding: 1rem;">
+            <div class="form-group">
+                <label style="font-size: 0.9rem;">Select Star</label>
+                <select id="finderStarSelect" style="width: 100%; padding: 8px; font-size: 1rem; margin-bottom: 0.5rem;"
+                    onchange="findNextDates()">
+                    <option value="">-- Choose Star --</option>
+                    {% for s in stars %}
+                    <option value="{{ s.eng }}">{{ s.eng }} / {{ s.mal }}</option>
+                    {% endfor %}
+                </select>
+
+                <label style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Duration</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
+                    <button type="button" class="btn-duration active" onclick="setFinderDuration(this, '')">Next
+                        5</button>
+                    <button type="button" class="btn-duration" onclick="setFinderDuration(this, '6')">6 Months</button>
+                    <button type="button" class="btn-duration" onclick="setFinderDuration(this, '12')">1 Year</button>
+                    <input type="hidden" id="finderDuration" value="">
+                </div>
+            </div>
+
+            <style>
+                .btn-duration {
+                    border: 1px solid #cbd5e1;
+                    background: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.85rem;
+                }
+
+                .btn-duration.active {
+                    background: #3b82f6;
+                    color: white;
+                    border-color: #3b82f6;
+                }
+            </style>
+
+            <div id="finderResults" style="min-height: 100px;">
+                <p style="color: #666; font-size: 0.9rem;">Select a star to see upcoming dates.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Malayalam Calendar Integration
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.getElementById('scheduledDate').value) {
+            fetchStarForDate();
+        }
+    });
+
+    function fetchStarForDate() {
+        const dateVal = document.getElementById('scheduledDate').value;
+        const badge = document.getElementById('dateStarBadge');
+
+        if (!dateVal) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        fetch(`/utility/get-star?date=${dateVal}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Show Star and Malayalam Date
+                    badge.innerHTML = `${data.nakshatra_eng} / ${data.nakshatra_mal}<br><span style="font-size:0.85em; opacity:0.8; font-weight:normal;">${data.mal_date_str}</span>`;
+                    badge.style.display = 'block';
+                    badge.dataset.star = data.nakshatra_eng;
+                }
+            });
+    }
+
+    function autoSelectStar() {
+        const badge = document.getElementById('dateStarBadge');
+        const starInput = document.getElementById('devStar');
+        if (badge.dataset.star) {
+            starInput.value = badge.dataset.star;
+            updateDetails();
+            starInput.style.backgroundColor = '#f0fdf4';
+            setTimeout(() => starInput.style.backgroundColor = '', 500);
+        }
+    }
+
+    function openStarFinder() {
+        document.getElementById('starFinderModal').style.display = 'flex';
+        const currentStar = document.getElementById('devStar').value.trim();
+        if (currentStar) {
+            const select = document.getElementById('finderStarSelect');
+            let found = false;
+
+            // Try Exact Match on Value first
+            for (let opt of select.options) {
+                if (opt.value && opt.value.toLowerCase() === currentStar.toLowerCase()) {
+                    select.value = opt.value;
+                    found = true;
+                    break;
+                }
+            }
+
+            // If not found, try Text Includes (for Malayalam input)
+            if (!found) {
+                for (let opt of select.options) {
+                    if (opt.value && opt.text.includes(currentStar)) {
+                        select.value = opt.value;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (found) {
+                findNextDates();
+            }
+        }
+    }
+
+    function closeStarFinder() {
+        document.getElementById('starFinderModal').style.display = 'none';
+    }
+
+    function setFinderDuration(btn, val) {
+        document.querySelectorAll('.btn-duration').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('finderDuration').value = val;
+        findNextDates();
+    }
+
+    function findNextDates() {
+        const star = document.getElementById('finderStarSelect').value;
+        const duration = document.getElementById('finderDuration').value;
+        const resultsDiv = document.getElementById('finderResults');
+
+        if (!star) return;
+
+        resultsDiv.innerHTML = '<p>Calculating...</p>';
+
+        let url = `/utility/get-next-star-dates?star_name=${star}`;
+        if (duration) url += `&months=${duration}`;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    let html = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.85rem; font-weight: 600;">Found ${data.dates.length} Dates</span>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="toggleFinderSelection(true)" style="font-size: 0.8rem; background:none; border:none; color:#3b82f6; cursor:pointer;">Select All</button>
+                            <button onclick="toggleFinderSelection(false)" style="font-size: 0.8rem; background:none; border:none; color:#64748b; cursor:pointer;">None</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">`;
+
+                    data.dates.forEach(d => {
+                        const dObj = new Date(d.date);
+                        const dStr = dObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const malStr = d.mal_date || d.star.mal;
+
+                        html += `
+                        <label class="finder-date-row" style="display: flex; align-items: center; padding: 8px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;">
+                            <input type="checkbox" class="finder-date-check" value="${d.date}" checked style="margin-right: 10px; width: 16px; height: 16px;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #333;">${dStr}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">${malStr}</div>
+                            </div>
+                        </label>
+                     `;
+                    });
+                    html += '</div>';
+
+                    html += `
+                    <div style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem; text-align: center;">
+                        <button onclick="replicateToSelected()" style="background: #22c55e; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%;">
+                            Replicate to Selected Dates
+                        </button>
+                    </div>
+                    `;
+
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<p style="color: red">Error calculating dates.</p>';
+                }
+            });
+    }
+
+    function toggleFinderSelection(state) {
+        document.querySelectorAll('.finder-date-check').forEach(cb => cb.checked = state);
+    }
+
+    function replicateToSelected() {
+        const selected = Array.from(document.querySelectorAll('.finder-date-check:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            alert("No dates selected!");
+            return;
+        }
+
+        // Populate global REPLICATE_DATES
+        REPLICATE_DATES = selected;
+
+        // Check if Devotee Name/Star needs to be set from Finder if empty?
+        const star = document.getElementById('finderStarSelect').value;
+        const currentStar = document.getElementById('devStar').value;
+        if (star && !currentStar) {
+            // Auto fill star
+            // Find mal name from options? Too complex, just use val
+            // Actually, updateDetails() reads the input.
+            // Let's leave it manual for safety or existing logic handles it.
+            document.getElementById('devStar').value = star;
+            updateDetails();
+        }
+
+        closeStarFinder();
+
+        // Open Replicate Modal with these dates pre-filled
+        // Only if name is set
+        if (!document.getElementById('devName').value.trim()) {
+            alert("Please enter Devotee Name (Bhaktan) to proceed with replication.");
+            document.getElementById('devName').focus();
+            return;
+        }
+
+        document.getElementById('replicateModal').style.display = 'flex';
+        renderRepDates();
+    }
+
+    function selectFinderDate(dateStr) {
+        const dateInput = document.getElementById('scheduledDate');
+        dateInput.value = dateStr;
+        updateDetails();
+        fetchStarForDate();
+        closeStarFinder();
+    }
 </script>
 {% endblock %}
