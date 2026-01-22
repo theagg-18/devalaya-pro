@@ -17,6 +17,11 @@
                 style="flex: 1; min-width: 200px; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px;">
             <input type="date" name="date" value="{{ date_filter }}"
                 style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+            <select name="payment_status" style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                <option value="all" {% if payment_status=='all' %}selected{% endif %}>All Status</option>
+                <option value="paid" {% if payment_status=='paid' %}selected{% endif %}>Paid</option>
+                <option value="pending" {% if payment_status=='pending' %}selected{% endif %}>Pending</option>
+            </select>
             <button type="submit" class="btn btn-primary">Search</button>
             {% if query or date_filter %}
             <a href="{{ url_for('cashier.history') }}" class="btn btn-secondary"
@@ -81,6 +86,27 @@
                             </div>
                             {% endfor %}
                         </div>
+
+                        {% if bill.payment_status == 'pending' or bill.payment_status == 'unpaid' %}
+                        <div style="margin-top: 4px;">
+                            {% if bill.payment_status == 'pending' %}
+                            <span
+                                style="background: #fef3c7; color: #b45309; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">
+                                PENDING PAYMENT
+                            </span>
+                            {% else %}
+                            <span
+                                style="background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">
+                                UNPAID / ACTION REQUIRED
+                            </span>
+                            {% endif %}
+
+                            {% if bill.phone %}
+                            <span style="font-size: 0.8rem; color: #b45309; margin-left: 5px;">📞 {{ bill.phone
+                                }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                     </td>
                     <td style="padding: 1rem; text-align: right; font-weight: 600;">₹{{ "%.2f"|format(bill.total_amount)
                         }}</td>
@@ -102,9 +128,35 @@
                         </div>
                         {% endif %}
                         {% else %}
-                        <span
-                            style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">{{
-                            bill.status|title }}</span>
+                        {% if bill.payment_status == 'pending' or bill.payment_status == 'unpaid' %}
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                            {% if bill.payment_status == 'pending' %}
+                            <span
+                                style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                Pending
+                            </span>
+                            {% else %}
+                            <span
+                                style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                Unpaid
+                            </span>
+                            {% endif %}
+
+                            <button onclick="markAsPaid('{{ bill.id }}', '{{ bill.bill_no }}')" title="Mark as Paid"
+                                style="background: #22c55e; color: white; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                                Mark Paid
+                            </button>
+                        </div>
+                        {% else %}
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <span
+                                style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">Paid</span>
+                            {% if bill.receiver_name %}
+                            <span style="font-size: 0.7rem; color: #166534; margin-top: 2px;">Rec: {{ bill.receiver_name
+                                }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         {% endif %}
                         {% endif %}
 
@@ -144,31 +196,33 @@
                 {% endfor %}
             </tbody>
         </table>
-    </div>
-</div>
 
-<!-- Pagination -->
-{% if total_pages > 1 %}
-<div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
-    {% if current_page > 1 %}
-    <a href="{{ url_for('cashier.history', page=current_page-1, q=query, date=date_filter) }}" class="btn btn-secondary"
-        style="padding: 0.5rem 1rem;">
-        &laquo; Previous
-    </a>
-    {% endif %}
 
-    <span style="color: var(--text-muted); font-size: 0.9rem;">
-        Page <strong>{{ current_page }}</strong> of {{ total_pages }}
-    </span>
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+            {% if current_page > 1 %}
+            <a href="{{ url_for('cashier.history', page=current_page-1, q=query, date=date_filter, payment_status=payment_status) }}"
+                class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                &laquo; Previous
+            </a>
+            {% endif %}
 
-    {% if current_page < total_pages %} <a
-        href="{{ url_for('cashier.history', page=current_page+1, q=query, date=date_filter) }}"
-        class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-        Next &raquo;
-        </a>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">
+                Page <strong>{{ current_page }}</strong> of {{ total_pages }}
+            </span>
+
+            {% if current_page < total_pages %} <a
+                href="{{ url_for('cashier.history', page=current_page+1, q=query, date=date_filter, payment_status=payment_status) }}"
+                class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                Next &raquo;
+                </a>
+                {% endif %}
+        </div>
         {% endif %}
+    </div>
+
 </div>
-{% endif %}
 </div>
 
 <script>
@@ -186,6 +240,23 @@
             return await res.json();
         } catch (err) {
             throw err;
+        }
+    }
+
+    async function markAsPaid(billId, billNo) {
+        if (!confirm(`Are you sure you have received payment for Bill ${billNo}?`)) return;
+
+        try {
+            const res = await api('/cashier/mark-paid/' + billId, {});
+            if (res.status === 'success') {
+                alert("Payment Received Successfully.");
+                window.location.reload();
+            } else {
+                alert("Error: " + (res.message || "Unknown error"));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Request Failed: " + e.message);
         }
     }
 
@@ -223,7 +294,7 @@
             return;
         }
 
-        if (!confirm(`This will CANCEL Bill ${displayNo} and load items into the cart for correction. Proceed?`)) return;
+        if (!confirm(`Load Bill ${displayNo} for editing? This will move items to the cart for correction.`)) return;
 
         try {
             const res = await api('/cashier/billing/edit/' + billId, { reason: reason });

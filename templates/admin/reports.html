@@ -11,6 +11,11 @@
                     style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 <input type="date" name="start_date" value="{{ start_date }}" title="From Date" style="width: auto;">
                 <input type="date" name="end_date" value="{{ end_date }}" title="To Date" style="width: auto;">
+                <select name="payment_status" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <option value="all" {% if payment_status=='all' %}selected{% endif %}>All Status</option>
+                    <option value="paid" {% if payment_status=='paid' %}selected{% endif %}>Paid</option>
+                    <option value="pending" {% if payment_status=='pending' %}selected{% endif %}>Pending</option>
+                </select>
                 <button type="submit" class="btn btn-primary">Search</button>
                 {% if search_query or (start_date and start_date != end_date) %}
                 <a href="{{ url_for('admin.reports') }}" class="btn btn-secondary">Reset</a>
@@ -25,7 +30,13 @@
         <div
             style="padding: 1rem; background: #e0e7ff; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
             <div style="font-size: 0.9rem; color: #4338ca; margin-bottom: 4px;">Revenue listed</div>
-            <div style="font-size: 2rem; font-weight: 700; color: #3730a3;">₹{{ "%.2f"|format(total_amount) }}</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #3730a3;">₹{{ "%.2f"|format(total_amount -
+                pending_amount) }}</div>
+        </div>
+        <div
+            style="padding: 1rem; background: #fef3c7; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: #b45309; margin-bottom: 4px;">Pending Amount</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #78350f;">₹{{ "%.2f"|format(pending_amount) }}</div>
         </div>
         <div
             style="padding: 1rem; background: #dcfce7; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
@@ -62,9 +73,32 @@
                         </div>
                         {% endif %}
                         {% endif %}
+
+
+                        {% if bill.payment_status == 'pending' and bill.status != 'cancelled' %}
+                        <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+                            <span
+                                style="background: #fef3c7; color: #b45309; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; width: fit-content;">PENDING
+                                PAYMENT</span>
+                            {% if bill.phone %}
+                            <span style="font-size: 0.75rem; color: #b45309;">📞 {{ bill.phone }}</span>
+                            {% endif %}
+
+                            <button onclick="markAsPaid('{{ bill.id }}', '{{ bill.bill_no }}')" class="no-print"
+                                title="Mark as Paid"
+                                style="background: #22c55e; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width: fit-content; margin-top: 2px;">
+                                Receive Payment
+                            </button>
+                        </div>
+                        {% endif %}
                     </td>
                     <td style="padding: 12px;">
-                        <span class="badge-cashier">{{ bill.cashier_name }}</span>
+                        <span class="badge-cashier" title="Created By">{{ bill.cashier_name }}</span>
+                        {% if bill.received_by %}
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
+                            Rec. by: <span style="font-weight: 600;">{{ bill.received_by }}</span>
+                        </div>
+                        {% endif %}
                     </td>
                     <td style="padding: 12px;">
                         <div style="font-weight: 600;">{{ bill.devotee_name or 'N/A' }}</div>
@@ -104,7 +138,7 @@
     {% if total_pages > 1 %}
     <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
         {% if current_page > 1 %}
-        <a href="{{ url_for('admin.reports', page=current_page-1, q=search_query, start_date=start_date, end_date=end_date) }}"
+        <a href="{{ url_for('admin.reports', page=current_page-1, q=search_query, start_date=start_date, end_date=end_date, payment_status=payment_status) }}"
             class="btn btn-secondary" style="padding: 0.5rem 1rem;">
             &laquo; Previous
         </a>
@@ -115,7 +149,7 @@
         </span>
 
         {% if current_page < total_pages %} <a
-            href="{{ url_for('admin.reports', page=current_page+1, q=search_query, start_date=start_date, end_date=end_date) }}"
+            href="{{ url_for('admin.reports', page=current_page+1, q=search_query, start_date=start_date, end_date=end_date, payment_status=payment_status) }}"
             class="btn btn-secondary" style="padding: 0.5rem 1rem;">
             Next &raquo;
             </a>
@@ -123,4 +157,40 @@
     </div>
     {% endif %}
 </div>
+</div>
+<script>
+    async function api(url, data) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Server Error ${res.status}: ${text}`);
+            }
+            return await res.json();
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async function markAsPaid(billId, billNo) {
+        if (!confirm(`Are you sure you have received payment for Bill ${billNo}?`)) return;
+
+        try {
+            const res = await api('/cashier/mark-paid/' + billId, {});
+            if (res.status === 'success') {
+                alert("Payment Received Successfully.");
+                window.location.reload();
+            } else {
+                alert("Error: " + (res.message || "Unknown error"));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Request Failed: " + e.message);
+        }
+    }
+</script>
 {% endblock %}

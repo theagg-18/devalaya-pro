@@ -395,6 +395,19 @@ def init_db():
         )
     ''')
 
+    # Migration: Add payment_status and phone if missing
+    if 'payment_status' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN payment_status TEXT DEFAULT 'paid'")
+    
+    if 'phone' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN phone TEXT")
+
+    if 'payment_received_by' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN payment_received_by INTEGER REFERENCES users(id)")
+
+    if 'payment_date' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN payment_date TIMESTAMP")
+
     # 7. Cashier Sessions (for tracking printer assignment)
     c.execute('''
         CREATE TABLE IF NOT EXISTS cashier_sessions (

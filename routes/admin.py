@@ -22,23 +22,43 @@ def require_super_user():
 def index():
     db = get_db()
     
-    # 1. Today's Total
+    # 1. Today's Total (Cash Basis: Paid Today)
     today = datetime.date.today().isoformat()
-    today_total = db.execute('SELECT SUM(total_amount) FROM bills WHERE date(created_at) = ?', (today,)).fetchone()[0] or 0
+    today_total = db.execute('''
+        SELECT SUM(total_amount) 
+        FROM bills 
+        WHERE date(COALESCE(payment_date, created_at)) = ? 
+          AND status != 'cancelled' 
+          AND status != 'draft'
+          AND payment_status = 'paid'
+    ''', (today,)).fetchone()[0] or 0
     
-    # 2. This Month's Total
+    # 2. This Month's Total (Cash Basis: Paid this Month)
     today_date = datetime.date.today()
     month_start = today_date.replace(day=1).isoformat()
-    month_total = db.execute('SELECT SUM(total_amount) FROM bills WHERE date(created_at) >= ?', (month_start,)).fetchone()[0] or 0
+    month_total = db.execute('''
+        SELECT SUM(total_amount) 
+        FROM bills 
+        WHERE date(COALESCE(payment_date, created_at)) >= ? 
+          AND status != 'cancelled' 
+          AND status != 'draft'
+          AND payment_status = 'paid'
+    ''', (month_start,)).fetchone()[0] or 0
+
+    # 2.5 Pending Payments Total (Outstanding)
+    pending_total = db.execute("SELECT SUM(total_amount) FROM bills WHERE payment_status = 'pending' AND status != 'cancelled' AND status != 'draft'").fetchone()[0] or 0
 
     # 3. Revenue Trend (Last 30 Days)
     thirty_days_ago_date = today_date - datetime.timedelta(days=29)
     thirty_days_ago = thirty_days_ago_date.isoformat()
     
     trend_data = db.execute('''
-        SELECT date(created_at) as day, SUM(total_amount) as total
+        SELECT date(COALESCE(payment_date, created_at)) as day, SUM(total_amount) as total
         FROM bills 
-        WHERE date(created_at) >= ?
+        WHERE date(COALESCE(payment_date, created_at)) >= ? 
+          AND status != 'cancelled' 
+          AND status != 'draft'
+          AND payment_status = 'paid'
         GROUP BY day
         ORDER BY day
     ''', (thirty_days_ago,)).fetchall()
@@ -89,10 +109,24 @@ def index():
         hours_labels.append(f"{h:02d}:00")
         hours_counts.append(hours_map.get(h, 0))
 
+    today_star = None
+    today_mal_date_str = ""
+    try:
+        from modules.panchang import get_nakshatra_for_date, get_malayalam_date
+        today_date_obj = datetime.date.today()
+        today_star = get_nakshatra_for_date(today_date_obj)
+        mal_date = get_malayalam_date(today_date_obj)
+        today_mal_date_str = f"{mal_date['day']} {mal_date['mal_month']} {mal_date['mal_year']}"
+    except:
+        pass
+
     return render_template('admin/dashboard.html',
                            now=format_ist_datetime(now_ist(), "%d-%m-%Y %I:%M %p"),
+                           today_star=today_star,
+                           today_mal_date_str=today_mal_date_str,
                            today_total=today_total,
                            month_total=month_total,
+                           pending_total=pending_total,
                            trend_dates=trend_dates,
                            trend_revenues=trend_revenues,
                            top_item_names=top_item_names,
@@ -440,18 +474,34 @@ def reports():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     search_query = request.args.get('q', '')
+    payment_status_filter = request.args.get('payment_status', 'all')
     
     # Defaults
     import datetime
+
     today = datetime.date.today().isoformat()
     if not start_date: start_date = today
     if not end_date: end_date = today
 
     # Base Conditions
-    conditions = ['date(b.created_at) BETWEEN ? AND ?']
-    params = [start_date, end_date]
+    conditions = ["b.status != 'draft'"]
+    params = []
+
+    # If status is pending, we ignore date filter as per requirement "view all pending"
+    # Otherwise, we apply date filter based on Effective Date (Payment Date if Paid, else Created Date)
+    if payment_status_filter != 'pending':
+         conditions.append('date(COALESCE(b.payment_date, b.created_at)) BETWEEN ? AND ?')
+         params.extend([start_date, end_date])
+    
+    # Payment Status Filter
+
+    # Payment Status Filter
+    if payment_status_filter != 'all':
+        conditions.append('b.payment_status = ?')
+        params.append(payment_status_filter)
     
     # Search Logic
+
     if search_query:
         # Search Bill No, Devotee, OR Item Name (Subquery)
         conditions.append('''
@@ -467,14 +517,19 @@ def reports():
     where_clause = ' AND '.join(conditions)
     
     # 1. Calculate Global Totals (Revenue & Count) for the filtered set
+    # Exclude CANCELLED bills from Revenue and Pending Amount
     grand_total_sql = f'''
-        SELECT COUNT(*), SUM(b.total_amount)
+        SELECT 
+            COUNT(*), 
+            SUM(CASE WHEN b.status != 'cancelled' THEN b.total_amount ELSE 0 END),
+            SUM(CASE WHEN b.payment_status = 'pending' AND b.status != 'cancelled' THEN b.total_amount ELSE 0 END)
         FROM bills b
         WHERE {where_clause}
     '''
     stats = db.execute(grand_total_sql, params).fetchone()
     total_records = stats[0] or 0
     total_revenue = stats[1] or 0.0
+    pending_amount = stats[2] or 0.0
 
     # 2. Pagination
     page = request.args.get('page', 1, type=int)
@@ -486,9 +541,11 @@ def reports():
     data_sql = f'''
         SELECT 
             b.*,
-            u.username as cashier_name
+            u.username as cashier_name,
+            u2.username as receiver_name
         FROM bills b
         JOIN users u ON b.cashier_id = u.id
+        LEFT JOIN users u2 ON b.payment_received_by = u2.id
         WHERE {where_clause}
         ORDER BY b.created_at DESC
         LIMIT ? OFFSET ?
@@ -514,10 +571,12 @@ def reports():
     return render_template('admin/reports.html', 
                            bills=bill_list, 
                            total_amount=total_revenue, 
+                           pending_amount=pending_amount,
                            count=total_records, 
                            start_date=start_date,
                            end_date=end_date,
                            search_query=search_query,
+                           payment_status=payment_status_filter,
                            current_page=page,
                            total_pages=total_pages)
 
@@ -546,9 +605,12 @@ def export_reports():
             b.devotee_name, 
             b.star, 
             GROUP_CONCAT(pm.name || ' (' || bi.count || ')', ', ') as items,
-            b.total_amount
+            b.total_amount,
+            b.payment_status,
+            u2.username as received_by
         FROM bills b
         JOIN users u ON b.cashier_id = u.id
+        LEFT JOIN users u2 ON b.payment_received_by = u2.id
         LEFT JOIN bill_items bi ON b.id = bi.bill_id
         LEFT JOIN puja_master pm ON bi.puja_id = pm.id
         WHERE date(b.created_at) BETWEEN ? AND ?
