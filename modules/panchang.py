@@ -169,7 +169,24 @@ def get_nakshatra_index(date_obj, lat=DEFAULT_LAT, lon=DEFAULT_LON):
 @lru_cache(maxsize=365)
 def get_nakshatra(date_obj, lat=DEFAULT_LAT, lon=DEFAULT_LON):
     """
-    Returns the nakshatra names for a given date.
+    Get the Nakshatra for a Gregorian date at the specified location.
+    
+    Parameters:
+        date_obj (datetime.date): The Gregorian date for which to compute the Nakshatra.
+        lat (float): Latitude in decimal degrees for the observation location. Defaults to the module DEFAULT_LAT.
+        lon (float): Longitude in decimal degrees for the observation location. Defaults to the module DEFAULT_LON.
+    
+    Returns:
+        dict: On success, returns {
+            "status": "success",
+            "date": "YYYY-MM-DD",
+            "index": int (0-26),
+            "nakshatra_eng": str,
+            "nakshatra_mal": str
+        }. On error, returns {
+            "status": "error",
+            "message": str
+        } describing the failure.
     """
     try:
         idx = get_nakshatra_index(date_obj, lat, lon)
