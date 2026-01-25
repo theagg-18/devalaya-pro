@@ -32,6 +32,9 @@
         <nav>
             {% if g.user %}
             <a href="/dashboard">Dashboard</a>
+            <a href="/utility/calendar">Calendar</a>
+            <a href="/utility/panchangam" style="position: relative;">Star Reference <span
+                    style="font-size: 0.6em; background: #eab308; color: black; padding: 2px 4px; border-radius: 4px; vertical-align: top;">New</span></a>
             {% if g.user.role == 'cashier' %}
             <a href="{{ url_for('cashier.history') }}">History</a>
             {% endif %}
