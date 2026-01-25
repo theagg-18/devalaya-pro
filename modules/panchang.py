@@ -180,10 +180,11 @@ def get_nakshatra(date_obj, lat=DEFAULT_LAT, lon=DEFAULT_LON):
             "nakshatra_eng": NAKSHATRAS_ENG[idx],
             "nakshatra_mal": NAKSHATRAS_MAL[idx]
         }
-    except Exception as e:
+    except Exception:
+        # Do not expose internal exception details to callers; return a generic error.
         return {
             "status": "error",
-            "message": str(e)
+            "message": "Nakshatra calculation failed"
         }
 
 @lru_cache(maxsize=365)
