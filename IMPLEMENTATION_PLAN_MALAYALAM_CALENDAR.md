@@ -12,20 +12,16 @@ We will use an **Offline Astronomical Calculation** approach. This ensures the s
 The "Star" or "Nakshatra" is determined by the Moon's longitude.
 *   The sky is divided into 27 sectors (Nakshatras) of 13°20' each.
 *   Formula: `Nakshatra Index = floor(Moon_Longitude / 13.3333)`
-*   We will use the **Ephem** Python library (standard for high-precision astronomy) to get the Moon's position for any given date.
+*   We will use the **Skyfield** Python library (modern successor to Ephem) to get the Moon's position. Skyfield is pure-Python and easier to install in environments without C compilers.
 
 ## 2. Backend Implementation Steps
 
-### Step 2.1: Add Dependency
-Add `ephem` to `requirements.txt`.
-
 ### Step 2.2: Create Calculation Module (`modules/panchang.py`)
 Create a utility function `get_nakshatra(date_obj)`:
-1.  Initialize an `ephem.Observer` for the Temple's location (Kerala standard: Lat 10.85, Lon 76.27).
-2.  Set the date (converting IST to UTC for the library).
-3.  Calculate `moon.compute(observer)`.
-4.  Get `moon.hlon` (Heliocentric Longitude) or `ra/dec` converted to Ecliptic Longitude.
-5.  Divide by `13.3333` degrees (360 / 27).
+1.  Initialize a `skyfield.api.Loader` pointing to a local `data` directory.
+2.  Load the `de421.bsp` ephemeris (standard, high-precision).
+3.  Calculate the Moon's ecliptic longitude at 6:00 AM IST (Sunrise rule).
+4.  Apply **Lahiri Ayanamsa** correction to convert Tropical longitude to Nirayana (Sidereal) longitude.5.  Divide by `13.3333` degrees (360 / 27).
 6.  Map the integer result (0-26) to the Malayalam Star Name (Aswathi, Bharani, etc.).
 
 ### Step 2.3: Create API Endpoint (`routes/utility.py`)
@@ -66,10 +62,10 @@ Create functionality to find the next 3 occurrences of a given star.
 *   In the Admin/Cashier Dashboard header, display **"Today's Star: [Star Name]"** for quick reference.
 
 ## 5. Execution Plan
-1.  **Install Library**: `pip install ephem`
+1.  **Install Library**: `pip install skyfield`
 2.  **Code Backend**: Implement `modules/panchang.py` and the API route.
 3.  **Code Frontend**: Update `billing.html` to fetch and display the star.
-4.  **Verify**: Compare calculated stars with a standard printed Malayalam calendar (Kalavara/Manorama) for accuracy adjustments (sometimes "Star of the day" logic varies if transition happens midday; usually we take the star present at Sunrise or Noon). We will use **Sunrise Rule** (Star present at Sunrise is the Star of the Day).
+4.  **Verify**: Compare calculated stars with a standard printed Malayalam calendar (Kalavara/Manorama) for accuracy adjustments. We use **Sunrise Rule** and **Lahiri Ayanamsa**.
 
 ---
 **Permission to Proceed:**

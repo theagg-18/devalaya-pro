@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Calendar Utility - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Calendar Utility</h1>
+    <div class="tabs" style="display: flex; gap: 1rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+        <button class="tab-btn active" onclick="switchTab('eng-to-mal')"
+            style="padding: 10px 20px; background: none; border: none; font-weight: 600; cursor: pointer; border-bottom: 2px solid var(--primary); color: var(--primary);">English
+            to Malayalam</button>
+        <button class="tab-btn" onclick="switchTab('mal-to-eng')"
+            style="padding: 10px 20px; background: none; border: none; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent;">Malayalam
+            to English</button>
+    </div>
+
+    <!-- English to Malayalam -->
+    <div id="eng-to-mal" class="tab-content">
+        <div class="form-group">
+            <label>Select English Date</label>
+            <input type="date" id="engDateInput" onchange="convertEngToMal()">
+        </div>
+        <div id="engResult" class="result-box"
+            style="margin-top: 20px; padding: 20px; background: var(--bg); border-radius: 8px; display: none;">
+            <h3>Result</h3>
+            <p><strong>Malayalam Date:</strong> <span id="resMalDate"></span></p>
+            <p><strong>Star:</strong> <span id="resStar"></span></p>
+        </div>
+    </div>
+
+    <!-- Malayalam to English -->
+    <div id="mal-to-eng" class="tab-content" style="display: none;">
+        <div class="flex-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+                <label>Year (ME)</label>
+                <input type="number" id="malYear" placeholder="e.g. 1200" value="1200">
+            </div>
+            <div class="form-group">
+                <label>Month</label>
+                <select id="malMonth">
+                    {% for m in mal_months %}
+                    <option value="{{ m }}">{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Day</label>
+                <input type="number" id="malDay" placeholder="1-31" min="1" max="32">
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="convertMalToEng()">Find English Date</button>
+
+        <div id="malResult" class="result-box"
+            style="margin-top: 20px; padding: 20px; background: var(--bg); border-radius: 8px; display: none;">
+            <h3>Result</h3>
+            <p><strong>English Date:</strong> <span id="resEngDate"
+                    style="font-size: 1.2rem; font-weight: bold;"></span></p>
+            <p><strong>Star:</strong> <span id="resEngStar"></span></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.getElementById(tabId).style.display = 'block';
+
+        document.querySelectorAll('.tab-btn').forEach(el => {
+            el.style.borderBottomColor = 'transparent';
+            el.style.color = 'var(--text-muted)';
+        });
+        const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+        activeBtn.style.borderBottomColor = 'var(--primary)';
+        activeBtn.style.color = 'var(--primary)';
+    }
+
+    async function convertEngToMal() {
+        const date = document.getElementById('engDateInput').value;
+        if (!date) return;
+
+        const res = await fetch(`/utility/get-star?date=${date}`);
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            document.getElementById('engResult').style.display = 'block';
+            document.getElementById('resMalDate').innerText = data.mal_date_str;
+            document.getElementById('resStar').innerText = `${data.nakshatra_eng} (${data.nakshatra_mal})`;
+
+            // Pre-fill Malayalam to English tab with the calculated date
+            // This sets the default to "Today" on load, and keeps it synced if user changes English date
+            if (data.mal_date_details) {
+                document.getElementById('malYear').value = data.mal_date_details.mal_year;
+                document.getElementById('malMonth').value = data.mal_date_details.mal_month;
+                document.getElementById('malDay').value = data.mal_date_details.day;
+            }
+        } else {
+            alert(data.message);
+        }
+    }
+
+    async function convertMalToEng() {
+        const year = document.getElementById('malYear').value;
+        const month = document.getElementById('malMonth').value;
+        const day = document.getElementById('malDay').value;
+
+        if (!year || !day) {
+            alert("Please enter year and day");
+            return;
+        }
+
+        const res = await fetch(`/utility/mal-to-eng?year=${year}&month=${month}&day=${day}`);
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            document.getElementById('malResult').style.display = 'block';
+            // Format nice date
+            const d = new Date(data.date);
+            document.getElementById('resEngDate').innerText = d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const star = data.star;
+            document.getElementById('resEngStar').innerText = `${star.nakshatra_eng} (${star.nakshatra_mal})`;
+        } else {
+            alert(data.message || "Date not found");
+        }
+    }
+
+    // Set default date to today
+    // Set default date to today (Correct timezone handling)
+    const today = new Date();
+    const offset = today.getTimezoneOffset();
+    const localDate = new Date(today.getTime() - (offset * 60 * 1000));
+    document.getElementById('engDateInput').value = localDate.toISOString().split('T')[0];
+
+    // Auto-load details for today
+    convertEngToMal();
+</script>
+{% endblock %}

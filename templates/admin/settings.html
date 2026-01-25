@@ -28,6 +28,24 @@
         </div>
 
         <div class="form-group">
+            <label>Temple Location (For Calendar Accuracy)</label>
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label for="latitude" style="font-size: 0.8rem; color: #666;">Latitude</label>
+                    <input type="number" step="any" id="latitude" name="latitude"
+                        value="{{ settings.latitude or 10.85 }}" placeholder="10.85">
+                </div>
+                <div style="flex: 1;">
+                    <label for="longitude" style="font-size: 0.8rem; color: #666;">Longitude</label>
+                    <input type="number" step="any" id="longitude" name="longitude"
+                        value="{{ settings.longitude or 76.27 }}" placeholder="76.27">
+                </div>
+            </div>
+            <p style="font-size: 0.75rem; color: #888; margin-top: 4px;">Default is 10.85, 76.27 (Kerala Standard).
+                Change only for precise local calculations.</p>
+        </div>
+
+        <div class="form-group">
             <label for="place">Place / District</label>
             <input type="text" id="place" name="place" value="{{ settings.place }}" placeholder="Place">
         </div>
