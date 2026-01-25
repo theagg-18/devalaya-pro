@@ -782,5 +782,7 @@ def get_nakshatra_timings(date_obj, lat=DEFAULT_LAT, lon=DEFAULT_LON):
         
     except Exception as e:
         import traceback
+        # Log full traceback on the server for debugging purposes
         traceback.print_exc()
-        return {'status': 'error', 'message': str(e)}
+        # Return a generic error message to avoid exposing internal details
+        return {'status': 'error', 'message': 'Internal Error'}
