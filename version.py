@@ -3,16 +3,26 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 __version_info__ = {
     "major": 1,
     "minor": 6,
-    "patch": 0,
+    "patch": 1,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.6.1",
+        "date": "2026-01-25",
+        "changes": [
+            "Feature: Built-in Malayalam Calendar & Star Calculation (Skyfield)",
+            "Feature: Panchangam Utility Page & Calendar Converter",
+            "Critical Fix: Syntax error in admin routes (admin.py)",
+            "Chore: Removed unused documentation files"
+        ]
+    },
     {
         "version": "1.6.0",
         "date": "2026-01-22",

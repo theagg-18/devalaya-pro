@@ -112,9 +112,9 @@ def index():
     today_star = None
     today_mal_date_str = ""
     try:
-        from modules.panchang import get_nakshatra_for_date, get_malayalam_date
+        from modules.panchang import get_nakshatra, get_malayalam_date
         today_date_obj = datetime.date.today()
-        today_star = get_nakshatra_for_date(today_date_obj)
+        today_star = get_nakshatra(today_date_obj)
         mal_date = get_malayalam_date(today_date_obj)
         today_mal_date_str = f"{mal_date['day']} {mal_date['mal_month']} {mal_date['mal_year']}"
     except:
@@ -184,19 +184,28 @@ def settings():
                 logo_path = f"uploads/{new_filename}"
 
         # Construct Query
+        # Extract latitude and longitude from form, with defaults
+        latitude = request.form.get('latitude', '10.85')
+        longitude = request.form.get('longitude', '76.27')
+
         if logo_path:
              db.execute(
                 '''UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, 
-                   print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=?, logo_path=? WHERE id=1''',
-                (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors, logo_path)
+                   print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=?, logo_path=?, latitude=?, longitude=? WHERE id=1''',
+                (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors, logo_path, latitude, longitude)
             )
         else:
              db.execute(
                 '''UPDATE temple_settings SET name_mal=?, name_eng=?, place=?, receipt_footer=?, backup_enabled=?, 
-                   print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=? WHERE id=1''',
-                (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors)
+                   print_template_content=?, subtitle_mal=?, subtitle_eng=?, color_theme=?, custom_theme_colors=?, latitude=?, longitude=? WHERE id=1''',
+                (name_mal, name_eng, place, footer, backup, template_content, subtitle_mal, subtitle_eng, color_theme, custom_theme_colors, latitude, longitude)
             )
         db.commit()
+        
+        # Invalidate Cache
+        from database import clear_settings_cache
+        clear_settings_cache()
+        
         flash('Settings updated successfully', 'success')
         return redirect(url_for('admin.settings'))
         
