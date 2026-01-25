@@ -8,6 +8,7 @@ A robust, cross-platform billing and temple management system designed for ease 
 *   **Reporting**: Detailed financial reports and dashboards.
 *   **Cross-Platform**: Runs on Windows, Linux, and Raspberry Pi.
 *   **Offline First**: Works without an internet connection (updates via Zip allowed).
+*   **Malayalam Calendar**: Built-in star (Nakshatra) calculation using Skyfield (Offline) with Panchangam utility.
 
 ## Quick Start
 

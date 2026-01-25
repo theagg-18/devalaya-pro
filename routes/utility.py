@@ -131,6 +131,9 @@ def mal_to_eng():
             mal_details = get_malayalam_date(eng_date, lat, lon)
             star = get_nakshatra(eng_date, lat, lon)
             
+            if star.get('status') == 'error':
+                return jsonify({'status': 'error', 'message': 'Star calculation failed'}), 500
+                
             return jsonify({
                 'status': 'success',
                 'date': eng_date.strftime("%Y-%m-%d"),
@@ -141,7 +144,9 @@ def mal_to_eng():
              return jsonify({'status': 'error', 'message': 'Date not found'}), 404
              
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': 'Internal Error'}), 500
         
 @utility_bp.route('/panchangam')
 def panchangam_view():
@@ -165,8 +170,10 @@ def get_panchangam_data_api():
         
         from modules.panchang import get_nakshatra_timings
         data = get_nakshatra_timings(today, lat, lon)
+        if data.get('status') == 'error':
+             return jsonify({'status': 'error', 'message': 'Internal Error'}), 500
         return jsonify(data)
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': 'Internal Error'}), 500
