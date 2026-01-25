@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem;">
+
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; color: #1e293b; margin-bottom: 0.5rem;">Star & Panchangam Reference</h1>
+        <p style="color: #64748b;">Astronomical Nakshatra Timings (Precise Calculation)</p>
+    </div>
+
+    <!-- Quick Date Selector -->
+    <div
+        style="display: flex; justify-content: center; margin-bottom: 2rem; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <button onclick="changeDate(-1)" class="btn-nav">← Prev</button>
+        <input type="date" id="dateInput" class="form-control"
+            style="width: auto; font-size: 1.1rem; font-weight: 600;">
+        <button onclick="changeDate(1)" class="btn-nav">Next →</button>
+        <button onclick="goToToday()" class="btn-nav" style="background: #e2e8f0; color: #333;">Today</button>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; align-items: start;">
+
+        <!-- Left Column: Status & Timeline -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <!-- Current Condition (Now) -->
+            <div class="card" style="border-top: 4px solid #3b82f6;">
+                <h3
+                    style="color: #3b82f6; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">
+                    Current Star Status</h3>
+                <div id="currentStarDisplay" style="text-align: center; padding: 1rem;">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Today's Timeline -->
+            <div class="card">
+                <h3
+                    style="font-size: 1.1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                    Day Timeline (00:00 - 23:59)</h3>
+                <div id="timelineContainer" class="timeline">
+                    <!-- Rendered JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Tools & Info -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <!-- Reference Tool: Star Finder -->
+            <div class="card" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; font-size: 1rem; color: #475569;">Star Finder (Reference)</h3>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button onclick="openStarFinder()" class="btn btn-secondary"
+                        style="background: white; width: 100%;">
+                        🔍 Find Upcoming Dates for a Star
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mandatory Disclaimer -->
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px;">
+                <p style="margin: 0; color: #92400e; font-size: 0.9rem; line-height: 1.5;">
+                    <strong>Note:</strong> Nakshatra timings are calculated astronomically based on the temple's
+                    location
+                    coordinates and may not align perfectly with printed calendars.
+                    Start/End times indicate precise astronomical transitions.
+                    <br><br>
+                    <strong>ശ്രദ്ധിക്കുക:</strong> ക്ഷേത്രത്തിന്റെ ഭൗഗോള സ്ഥാനം (അക്ഷാംശം, രേഖാംശം) അടിസ്ഥാനമാക്കി
+                    ജ്യോതിശാസ്ത്ര ഗണിതപ്രകാരം നിർണ്ണയിക്കുന്ന നക്ഷത്രകാലങ്ങളാണ് ഇവിടെ പ്രദർശിപ്പിക്കുന്നത്. അതിനാൽ
+                    അച്ചടിച്ച പഞ്ചാംഗങ്ങളിലെയും കലണ്ടറുകളിലെയും സമയങ്ങളുമായി ഇവ പൂർണ്ണമായും ഏകീകരിക്കണമെന്നില്ല. ഇവിടെ
+                    കാണിക്കുന്ന ആരംഭ-അവസാന സമയങ്ങൾ നക്ഷത്രമാറ്റത്തിന്റെ കൃത്യമായ ജ്യോതിശാസ്ത്ര മുഹൂർത്തങ്ങളെയാണ്
+                    സൂചിപ്പിക്കുന്നത്.
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Reusing Star Finder Modal from Billing (Simplified) -->
+<div id="starFinderModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1100; justify-content: center; align-items: center;">
+    <div class="card" style="width: 400px; padding: 0;">
+        <div
+            style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">Find Star Dates</h3>
+            <button onclick="document.getElementById('starFinderModal').style.display='none'"
+                style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding: 1.5rem;">
+            <select id="finderStarSelect" class="form-control" style="margin-bottom: 1rem;">
+                <option value="">-- Select Star --</option>
+                <!-- Populated by JS -->
+            </select>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <button onclick="findDates('3')" class="btn btn-secondary" style="flex:1;">3 Months</button>
+                <button onclick="findDates('6')" class="btn btn-secondary" style="flex:1;">6 Months</button>
+            </div>
+            <div id="finderResults"
+                style="max-height: 200px; overflow-y: auto; background: #f1f5f9; padding: 0.5rem; border-radius: 4px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-nav {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .btn-nav:hover {
+        background: #f1f5f9;
+    }
+
+    .timeline-item {
+        display: flex;
+        gap: 1rem;
+        padding-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .timeline-marker {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 50px;
+        flex-shrink: 0;
+    }
+
+    .marker-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #cbd5e1;
+        z-index: 1;
+    }
+
+    .timeline-line {
+        width: 2px;
+        background: #e2e8f0;
+        flex: 1;
+        margin-top: 4px;
+    }
+
+    .timeline-item:last-child .timeline-line {
+        display: none;
+    }
+
+    .timeline-content {
+        background: #f8fafc;
+        padding: 1rem;
+        border-radius: 8px;
+        flex: 1;
+        border: 1px solid #e2e8f0;
+    }
+
+    .active-star .marker-dot {
+        background: #22c55e;
+        box-shadow: 0 0 0 2px #22c55e;
+    }
+
+    .active-star .timeline-content {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+    }
+
+    .time-badge {
+        font-family: monospace;
+        font-size: 0.9rem;
+        background: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #333;
+    }
+</style>
+
+<script>
+    // Stars Constant (Should ideally come from backend or shared JS)
+    const STARS = [
+        "Ashwati", "Bharani", "Karthika", "Rohini", "Makayiram", "Thiruvathira",
+        "Punartham", "Pooyam", "Ayilyam", "Makam", "Pooram", "Uthram",
+        "Atham", "Chithira", "Choti", "Vishakham", "Anizham", "Thrikketta",
+        "Moolam", "Pooradam", "Uthradam", "Thiruvonam", "Avittam", "Chathayam",
+        "Pooruruttathi", "Uthrattathi", "Revathi"
+    ];
+
+    let currentDate = new Date();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Init Date Input
+        const input = document.getElementById('dateInput');
+        input.valueAsDate = currentDate;
+        input.addEventListener('change', (e) => {
+            currentDate = new Date(e.target.value);
+            loadData();
+        });
+
+        // Init Star Dropdown
+        const sel = document.getElementById('finderStarSelect');
+        STARS.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.innerText = s;
+            sel.appendChild(opt);
+        });
+
+        loadData();
+    });
+
+    function changeDate(days) {
+        currentDate.setDate(currentDate.getDate() + days);
+        document.getElementById('dateInput').valueAsDate = currentDate;
+        loadData();
+    }
+
+    function goToToday() {
+        currentDate = new Date();
+        document.getElementById('dateInput').valueAsDate = currentDate;
+        loadData();
+    }
+
+    async function loadData() {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const container = document.getElementById('timelineContainer');
+        const currentDisplay = document.getElementById('currentStarDisplay');
+
+        container.innerHTML = '<div style="padding:1rem;">Loading...</div>';
+        currentDisplay.innerHTML = '<div class="spinner"></div>';
+
+        try {
+            const res = await fetch(`/utility/get-panchangam-data?date=${dateStr}`);
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                renderTimeline(data.timeline);
+                updateCurrentStatus(data.timeline);
+            } else {
+                container.innerHTML = `<div style="color:red; padding:1rem;">Error: ${data.message}</div>`;
+            }
+        } catch (e) {
+            container.innerHTML = `<div style="color:red; padding:1rem;">Connection Error</div>`;
+        }
+    }
+
+    function formatTime(isoStr) {
+        if (!isoStr) return "Next Day"; // Or "Continuously"
+        const d = new Date(isoStr);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function isCurrent(segment) {
+        const now = new Date();
+        const start = segment.start ? new Date(segment.start) : new Date(0); // far past
+        // Handle "Before..." string if needed? Backend returns ISO or string.
+        // Backend logic returns strings like "Before 12:00" for start?
+        // Wait, my backend logic had `start_val = prev['end_time']`. If prev is None, it was a string.
+        // I need to handle that string carefully.
+
+        // Let's rely on server ensuring it's a date object/iso string mostly.
+        // If it's a string starting with "Before", we treat it as "Start of day".
+
+        let startDt = new Date(0);
+        if (typeof segment.start === 'string' && segment.start.includes('Before')) {
+            startDt = new Date(currentDate);
+            startDt.setHours(0, 0, 0, 0);
+        } else if (segment.start) {
+            startDt = new Date(segment.start);
+        }
+
+        let endDt = new Date(8640000000000000); // far future
+        if (segment.end) {
+            endDt = new Date(segment.end);
+        }
+
+        // Only mark active if showing TODAY
+        const isToday = now.toDateString() === currentDate.toDateString();
+        if (!isToday) return false;
+
+        return now >= startDt && now < endDt;
+    }
+
+    function renderTimeline(timeline) {
+        const container = document.getElementById('timelineContainer');
+        container.innerHTML = '';
+
+        if (timeline.length === 0) {
+            container.innerHTML = '<div style="padding:1rem;">No data available.</div>';
+            return;
+        }
+
+        timeline.forEach(seg => {
+            const active = isCurrent(seg);
+            const activeClass = active ? 'active-star' : '';
+
+            let timeStr = "";
+            let startT = seg.start;
+            let endT = seg.end;
+
+            // Format Display
+            if (typeof startT === 'string' && startT.includes('Before')) {
+                // Keep as is or make nice
+                startT = "Midnight";
+            } else {
+                startT = formatTime(startT);
+            }
+
+            let endStr = endT ? formatTime(endT) : "Next Day";
+
+            const html = `
+            <div class="timeline-item ${activeClass}">
+                <div class="timeline-marker">
+                    <div class="marker-dot"></div>
+                    <div class="timeline-line"></div>
+                </div>
+                <div class="timeline-content">
+                     <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">
+                        ${seg.name} <span style="font-size:0.9rem; font-weight:400; color:#64748b;">(${seg.mal})</span>
+                     </div>
+                     <div style="margin-top: 0.5rem; font-size: 0.95rem; color: #333; display: flex; align-items: center; gap: 8px;">
+                        <span>From</span> <span class="time-badge">${startT}</span>
+                        <span>To</span> <span class="time-badge">${endStr}</span>
+                     </div>
+                     ${active ? '<div style="margin-top:0.5rem; font-size:0.8rem; font-weight:700; color:#15803d; text-transform:uppercase;">● Active Now</div>' : ''}
+                </div>
+            </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function updateCurrentStatus(timeline) {
+        const display = document.getElementById('currentStarDisplay');
+        const activeSeg = timeline.find(seg => isCurrent(seg));
+
+        if (activeSeg) {
+            let endStr = activeSeg.end ? formatTime(activeSeg.end) : "Next Day";
+            display.innerHTML = `
+                <div style="font-size: 2.5rem; font-weight: 800; color: #1e293b;">${activeSeg.name}</div>
+                <div style="font-size: 1.5rem; color: #64748b; margin-top: -5px;">${activeSeg.mal}</div>
+                <div style="margin-top: 1rem; font-size: 1.1rem;">
+                    Ends at <strong>${endStr}</strong>
+                </div>
+            `;
+        } else if (currentDate.toDateString() !== new Date().toDateString()) {
+            display.innerHTML = `<div style="color:#666;">Select "Today" to see live status.</div>`;
+        } else {
+            display.innerHTML = `<div style="color:#666;">Calculating...</div>`;
+        }
+    }
+
+    function openStarFinder() {
+        document.getElementById('starFinderModal').style.display = 'flex';
+    }
+
+    async function findDates(months) {
+        const star = document.getElementById('finderStarSelect').value;
+        const resDiv = document.getElementById('finderResults');
+        if (!star) { alert("Select a star"); return; }
+
+        resDiv.innerHTML = "Searching...";
+
+        const res = await fetch(`/utility/get-next-star-dates?star_name=${star}&months=${months}`);
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            resDiv.innerHTML = "";
+            if (data.dates.length === 0) { resDiv.innerHTML = "No dates found."; return; }
+
+            let ul = document.createElement('ul');
+            ul.style.paddingLeft = "1.5rem";
+            data.dates.forEach(d => {
+                let li = document.createElement('li');
+                // d.date is YYYY-MM-DD
+                const dobj = new Date(d.date);
+                li.innerText = `${dobj.toLocaleDateString()} (${d.mal_date})`;
+                ul.appendChild(li);
+            });
+            resDiv.appendChild(ul);
+        } else {
+            resDiv.innerHTML = "Error.";
+        }
+    }
+</script>
+{% endblock %}

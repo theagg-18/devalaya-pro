@@ -16,7 +16,10 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 # Determine base directory for static and template files
-basedir = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    basedir = sys._MEIPASS
+else:
+    basedir = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__, 
             static_folder=os.path.join(basedir, 'static'),
@@ -98,65 +101,23 @@ def from_json_filter(value):
 
 @app.context_processor
 def inject_settings():
-    from database import get_db
+    from database import get_cached_settings
     from routes.cashier import STARS
-    from themes import get_theme_css
     import datetime
-    import traceback
+    
+    settings, theme_css = get_cached_settings()
     
     star_map = {s['eng']: s['mal'] for s in STARS}
     
-    with app.app_context():
-        try:
-            db = get_db()
-            settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
-            
-            # Get theme CSS with error handling
-            theme_css = ""
-            try:
-                if settings:
-                    # Check if color_theme column exists
-                    theme_name = settings['color_theme'] if 'color_theme' in settings.keys() else 'kerala'
-                    
-                    # Parse custom colors if available
-                    custom_colors = None
-                    if 'custom_theme_colors' in settings.keys() and settings['custom_theme_colors']:
-                        import json
-                        try:
-                            custom_colors = json.loads(settings['custom_theme_colors'])
-                        except:
-                            pass
-                else:
-                    theme_name = 'kerala'
-                    custom_colors = None
-                    
-                theme_css = get_theme_css(theme_name, custom_colors)
-            except Exception as e:
-                import logging
-                logging.error(f"ERROR generating theme CSS: {e}")
-                # traceback.print_exc() # Logging handles this if we want, or remove
-                theme_css = get_theme_css('kerala')  # Fallback to default
-            
-            return {
-                'temple_settings': settings,
-                'now_year': now_ist().year,
-                'stars': STARS,
-                'star_map': star_map,
-                'app_version': get_version(),
-                'app_version_display': get_version_display(),
-                'theme_css': theme_css
-            }
-        except Exception as e:
-            import logging
-            logging.error(f"ERROR in context processor: {e}")
-            # traceback.print_exc()
-            return {
-                'temple_settings': None,
-                'now_year': datetime.datetime.now().year,
-                'stars': STARS,
-                'star_map': star_map,
-                'theme_css': get_theme_css('kerala')  # Default theme
-            }
+    return {
+        'temple_settings': settings,
+        'now_year': now_ist().year,
+        'stars': STARS,
+        'star_map': star_map,
+        'app_version': get_version(),
+        'app_version_display': get_version_display(),
+        'theme_css': theme_css
+    }
 
 # Register Database Teardown
 app.teardown_appcontext(close_db)

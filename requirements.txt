@@ -4,3 +4,6 @@ Werkzeug
 requests
 Flask
 python-dotenv
+skyfield
+zeroconf
+ifaddr

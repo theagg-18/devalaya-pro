@@ -21,8 +21,7 @@ Create a utility function `get_nakshatra(date_obj)`:
 1.  Initialize a `skyfield.api.Loader` pointing to a local `data` directory.
 2.  Load the `de421.bsp` ephemeris (standard, high-precision).
 3.  Calculate the Moon's ecliptic longitude at 6:00 AM IST (Sunrise rule).
-4.  Apply **Lahiri Ayanamsa** correction to convert Tropical longitude to Nirayana (Siderial) longitude.
-5.  Divide by `13.3333` degrees (360 / 27).
+4.  Apply **Lahiri Ayanamsa** correction to convert Tropical longitude to Nirayana (Sidereal) longitude.5.  Divide by `13.3333` degrees (360 / 27).
 6.  Map the integer result (0-26) to the Malayalam Star Name (Aswathi, Bharani, etc.).
 
 ### Step 2.3: Create API Endpoint (`routes/utility.py`)

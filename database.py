@@ -2,6 +2,46 @@ import sqlite3
 import os
 from flask import g
 from config import Config
+from themes import get_theme_css
+import json
+
+# Settings Cache
+_settings_cache = None
+
+def get_cached_settings():
+    global _settings_cache
+    if _settings_cache:
+        return _settings_cache
+        
+    db = get_db()
+    row = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+    settings = dict(row) if row else None
+    
+    # Calculate Theme CSS
+    theme_css = ""
+    try:
+        if settings:
+            theme_name = settings.get('color_theme', 'kerala')
+            custom_colors = None
+            if settings.get('custom_theme_colors'):
+                try:
+                    custom_colors = json.loads(settings['custom_theme_colors'])
+                except:
+                    pass
+            theme_css = get_theme_css(theme_name, custom_colors)
+        else:
+            theme_css = get_theme_css('kerala')
+    except Exception as e:
+        import logging
+        logging.error(f"Error generating theme CSS in cache: {e}")
+        theme_css = get_theme_css('kerala')
+        
+    _settings_cache = (settings, theme_css)
+    return _settings_cache
+
+def clear_settings_cache():
+    global _settings_cache
+    _settings_cache = None
 
 def get_db():
     if 'db' not in g:
@@ -15,6 +55,8 @@ def get_db():
         g.db.execute('PRAGMA journal_mode=WAL;')
         g.db.execute('PRAGMA synchronous=NORMAL;')
         g.db.execute('PRAGMA foreign_keys=ON;')
+        g.db.execute('PRAGMA cache_size=-64000;') # 64MB cache
+        g.db.execute('PRAGMA mmap_size=268435456;') # 256MB mmap
 
     return g.db
 
@@ -79,6 +121,12 @@ def init_db():
 
     if 'logo_path' not in setting_cols:
         c.execute("ALTER TABLE temple_settings ADD COLUMN logo_path TEXT")
+
+    # Migration: Add Latitude/Longitude
+    if 'latitude' not in setting_cols:
+        c.execute("ALTER TABLE temple_settings ADD COLUMN latitude REAL DEFAULT 10.85") # Default Kerala Lat
+    if 'longitude' not in setting_cols:
+        c.execute("ALTER TABLE temple_settings ADD COLUMN longitude REAL DEFAULT 76.27") # Default Kerala Lon
 
     # Set default template (Defined here so it's available for updates)
     default_template = """<!DOCTYPE html>
@@ -416,10 +464,23 @@ def init_db():
             printer_id INTEGER,
             login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_active INTEGER DEFAULT 1,
-            FOREIGN KEY(cashier_id) REFERENCES users(id),
             FOREIGN KEY(printer_id) REFERENCES printers(id)
         )
     ''')
+
+    # Performance Indexes
+    # Check/Create indexes for frequent query filters
+    index_queries = [
+        "CREATE INDEX IF NOT EXISTS idx_bills_created_at ON bills(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_bills_payment_status ON bills(payment_status)",
+        "CREATE INDEX IF NOT EXISTS idx_bills_cashier_id ON bills(cashier_id)",
+        "CREATE INDEX IF NOT EXISTS idx_bills_status ON bills(status)",
+        # Covering index for dashboard stats might help, but individual indexes are often enough for SQLite
+        "CREATE INDEX IF NOT EXISTS idx_bills_dashboard ON bills(created_at, status, payment_status)"
+    ]
+    
+    for q in index_queries:
+        c.execute(q)
 
     conn.commit()
     conn.close()
