@@ -1,12 +1,30 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, g, current_app
-import sqlite3
-from database import get_db
-from modules.printers import printer_manager
 import os
 import datetime
+import logging
+import sqlite3
+
+from flask import Blueprint, render_template, request, flash, redirect, url_for, g, current_app, send_file
+from werkzeug.security import generate_password_hash
+
+from database import get_db
+from modules.printers import printer_manager
 from config import Config
-from flask import send_file
 from utils.timezone_utils import now_ist, format_ist_datetime
+
+_ALLOWED_IMAGE_TYPES = {'jpeg', 'png', 'gif', 'webp'}
+
+_KNOWN_TABLES = frozenset({
+    'temple_settings', 'users', 'puja_master', 'bills',
+    'bill_items', 'printers', 'cashier_sessions',
+})
+
+def _validate_pin(pin):
+    """Return error string or None."""
+    if len(pin) < 4:
+        return 'PIN must be at least 4 characters.'
+    if len(pin) > 20:
+        return 'PIN must not exceed 20 characters.'
+    return None
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -139,7 +157,6 @@ def settings():
     db = get_db()
     
     if request.method == 'POST':
-        print(f"DEBUG: Temple Settings POST: {request.form}")
         name_mal = request.form['name_mal']
         name_eng = request.form['name_eng']
         place = request.form['place']
@@ -167,20 +184,27 @@ def settings():
             file = request.files['logo']
             if file and file.filename != '':
                 from werkzeug.utils import secure_filename
-                import os
-                
+                import imghdr
+
                 # Create upload dir
                 upload_folder = os.path.join(current_app.static_folder, 'uploads')
                 if not os.path.exists(upload_folder):
                     os.makedirs(upload_folder)
-                
-                # Save file with timestamp to prevent cache
+
+                # Save with timestamp to prevent cache collisions
                 filename = secure_filename(file.filename)
                 timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
                 new_filename = f"logo_{timestamp}_{filename}"
-                file.save(os.path.join(upload_folder, new_filename))
-                
-                # Store relative path for static url_for
+                save_path = os.path.join(upload_folder, new_filename)
+                file.save(save_path)
+
+                # Validate actual image content (not just extension)
+                detected = imghdr.what(save_path)
+                if detected not in _ALLOWED_IMAGE_TYPES:
+                    os.remove(save_path)
+                    flash('Invalid image file. Only JPEG, PNG, GIF, WebP are allowed.', 'error')
+                    return redirect(url_for('admin.settings'))
+
                 logo_path = f"uploads/{new_filename}"
 
         # Construct Query
@@ -212,65 +236,84 @@ def settings():
     settings = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
     return render_template('admin/settings.html', settings=settings)
 
+def _active_admin_count_excluding(db, user_id):
+    return db.execute(
+        "SELECT COUNT(*) FROM users WHERE role='admin' AND is_active=1 AND id != ?",
+        (user_id,)
+    ).fetchone()[0]
+
 @admin_bp.route('/users', methods=('GET', 'POST'))
 def users():
     db = get_db()
     if request.method == 'POST':
-        print(f"DEBUG: Users POST: {request.form}")
         if 'create_user' in request.form:
             username = request.form['username']
             pin = request.form['pin']
             role = request.form['role']
-            try:
-                db.execute('INSERT INTO users (username, pin, role) VALUES (?, ?, ?)',
-                           (username, pin, role))
-                db.commit()
-                flash('User added successfully', 'success')
-            except Exception as e:
-                import logging
-                logging.error(f"Error adding user: {e}", exc_info=True)
-                flash('An error occurred while adding the user.', 'error')
+            pin_error = _validate_pin(pin)
+            if pin_error:
+                flash(pin_error, 'error')
+            else:
+                try:
+                    db.execute('INSERT INTO users (username, pin, role) VALUES (?, ?, ?)',
+                               (username, generate_password_hash(pin), role))
+                    db.commit()
+                    flash('User added successfully', 'success')
+                except Exception as e:
+                    logging.error(f"Error adding user: {e}", exc_info=True)
+                    flash('An error occurred while adding the user.', 'error')
+
         elif 'delete_user' in request.form:
             user_id = int(request.form['user_id'])
-            
             if user_id == g.user['id']:
                 flash('You cannot delete your own account.', 'error')
             else:
-                try:
-                    # Prevent deleting self or last admin ideally, but keeping simple for now
-                    db.execute('DELETE FROM users WHERE id = ?', (user_id,))
-                    db.commit()
-                    flash('User deleted successfully', 'success')
-                except sqlite3.IntegrityError:
-                    # Fallback: Deactivate if they have history
-                    db.execute('UPDATE users SET is_active = 0 WHERE id = ?', (user_id,))
-                    db.commit()
-                    flash('User has billing history and cannot be deleted. Account deactivated instead.', 'warning')
-                except Exception as e:
-                    import logging
-                    logging.error(f"Error deleting user: {e}", exc_info=True)
-                    flash('An error occurred while deleting the user.', 'error')
-            
+                target = db.execute('SELECT role FROM users WHERE id = ?', (user_id,)).fetchone()
+                if target and target['role'] == 'admin' and _active_admin_count_excluding(db, user_id) == 0:
+                    flash('Cannot remove the last active admin account.', 'error')
+                else:
+                    try:
+                        db.execute('DELETE FROM users WHERE id = ?', (user_id,))
+                        db.commit()
+                        flash('User deleted successfully', 'success')
+                    except sqlite3.IntegrityError:
+                        db.execute('UPDATE users SET is_active = 0 WHERE id = ?', (user_id,))
+                        db.commit()
+                        flash('User has billing history and cannot be deleted. Account deactivated instead.', 'warning')
+                    except Exception as e:
+                        logging.error(f"Error deleting user: {e}", exc_info=True)
+                        flash('An error occurred while deleting the user.', 'error')
+
         elif 'change_pin' in request.form:
             user_id = request.form['user_id']
             new_pin = request.form['new_pin']
-            try:
-                db.execute('UPDATE users SET pin = ? WHERE id = ?', (new_pin, user_id))
-                db.commit()
-                flash('PIN/Password updated successfully', 'success')
-            except Exception as e:
-                import logging
-                logging.error(f"Error updating PIN: {e}", exc_info=True)
-                flash('An error occurred while updating the PIN.', 'error')
+            pin_error = _validate_pin(new_pin)
+            if pin_error:
+                flash(pin_error, 'error')
+            else:
+                try:
+                    db.execute('UPDATE users SET pin = ? WHERE id = ?',
+                               (generate_password_hash(new_pin), user_id))
+                    db.commit()
+                    flash('PIN/Password updated successfully', 'success')
+                except Exception as e:
+                    logging.error(f"Error updating PIN: {e}", exc_info=True)
+                    flash('An error occurred while updating the PIN.', 'error')
 
         elif 'toggle_active' in request.form:
-            user_id = request.form['user_id']
+            user_id = int(request.form['user_id'])
             is_active = int(request.form['is_active'])
+            if is_active == 0:
+                target = db.execute('SELECT role FROM users WHERE id = ?', (user_id,)).fetchone()
+                if target and target['role'] == 'admin' and _active_admin_count_excluding(db, user_id) == 0:
+                    flash('Cannot deactivate the last active admin account.', 'error')
+                    users = db.execute('SELECT * FROM users').fetchall()
+                    return render_template('admin/users.html', users=users)
             db.execute('UPDATE users SET is_active = ? WHERE id = ?', (is_active, user_id))
             db.commit()
             status = "activated" if is_active else "deactivated"
             flash(f'User {status} successfully', 'success')
-            
+
     users = db.execute('SELECT * FROM users').fetchall()
     return render_template('admin/users.html', users=users)
 
@@ -279,8 +322,6 @@ def printers():
     db = get_db()
     
     if request.method == 'POST':
-        print(f"DEBUG: Printers POST: {request.form}")
-        
         if 'add_web_printer' in request.form:
              try:
                 db.execute('INSERT INTO printers (name, friendly_name) VALUES (?, ?)',
@@ -288,7 +329,6 @@ def printers():
                 db.commit()
                 flash('Browser Virtual Printer added successfully', 'success')
              except Exception as e:
-                import logging
                 logging.error(f"Error adding browser printer: {e}", exc_info=True)
                 flash('An error occurred while adding the browser printer.', 'error')
                 
@@ -301,7 +341,6 @@ def printers():
                 db.commit()
                 flash('Printer added successfully', 'success')
             except Exception as e:
-                import logging
                 logging.error(f"Error adding printer: {e}", exc_info=True)
                 flash('An error occurred while adding the printer.', 'error')
         
@@ -323,7 +362,6 @@ def printers():
                 db.commit()
                 flash('Printer is in use, so it was disabled instead of deleted.', 'warning')
             except Exception as e:
-                import logging
                 logging.error(f"Error removing printer: {e}", exc_info=True)
                 flash('An error occurred while removing the printer.', 'error')
 
@@ -345,7 +383,6 @@ def printers():
 def items():
     db = get_db()
     if request.method == 'POST':
-        print(f"DEBUG: Items POST: {request.form}")
         if 'add_item' in request.form:
             name = request.form['name']
             amount = float(request.form['amount'])
@@ -356,7 +393,6 @@ def items():
                 db.commit()
                 flash('Item added successfully', 'success')
             except Exception as e:
-                import logging
                 logging.error(f"Error adding item: {e}", exc_info=True)
                 flash('An error occurred while adding the item.', 'error')
         
@@ -373,7 +409,6 @@ def items():
                 db.commit()
                 flash('Item archived because it has billing history (Soft Deleted)', 'warning')
             except Exception as e:
-                import logging
                 logging.error(f"Error deleting item: {e}", exc_info=True)
                 flash('An error occurred while deleting the item.', 'error')
 
@@ -388,7 +423,6 @@ def items():
                 db.commit()
                 flash('Item updated successfully', 'success')
             except Exception as e:
-                import logging
                 logging.error(f"Error updating item: {e}", exc_info=True)
                 flash('An error occurred while updating the item.', 'error')
 
@@ -512,16 +546,16 @@ def reports():
     # Search Logic
 
     if search_query:
-        # Search Bill No, Devotee, OR Item Name (Subquery)
+        # Search Bill No, Devotee, Phone, OR Item Name (Subquery)
         conditions.append('''
-            (b.bill_no LIKE ? OR b.devotee_name LIKE ? OR EXISTS (
-                SELECT 1 FROM bill_items bi 
-                JOIN puja_master pm ON bi.puja_id = pm.id 
+            (b.bill_no LIKE ? OR b.devotee_name LIKE ? OR b.phone LIKE ? OR EXISTS (
+                SELECT 1 FROM bill_items bi
+                JOIN puja_master pm ON bi.puja_id = pm.id
                 WHERE bi.bill_id = b.id AND pm.name LIKE ?
             ))
         ''')
         wildcard = f'%{search_query}%'
-        params.extend([wildcard, wildcard, wildcard])
+        params.extend([wildcard, wildcard, wildcard, wildcard])
         
     where_clause = ' AND '.join(conditions)
     
@@ -716,7 +750,6 @@ def trigger_backup():
         flash(f'Backup created successfully: {backup_filename}', 'success')
         
     except Exception as e:
-        import logging
         logging.error(f"Backup failed: {e}", exc_info=True)
         flash('Backup failed. Check logs for details.', 'error')
         
@@ -755,7 +788,6 @@ def delete_backup(filename):
         else:
             flash('File not found', 'error')
     except Exception as e:
-        import logging
         logging.error(f"Error deleting file: {e}", exc_info=True)
         flash('An error occurred while deleting the file.', 'error')
         
@@ -795,7 +827,6 @@ def restore_backup(filename):
         flash(f'Database restored successfully from {safe_filename}.', 'success')
         
     except Exception as e:
-        import logging
         logging.error(f"Restore failed: {e}", exc_info=True)
         flash('Database restore failed. Check logs for details.', 'error')
         
@@ -858,35 +889,30 @@ def reset_database():
         bck.close()
         
     except Exception as e:
-        import logging
         logging.error(f"Reset cancelled: Critical backup failed ({e})", exc_info=True)
         flash('Reset cancelled due to backup failure.', 'error')
         return redirect(url_for('admin.backups'))
         
-    # 2. Drop all tables
+    # 2. Drop all tables (only known app tables — no f-string injection risk)
     try:
-        # We need a fresh connection to drop everything or use existing
-        # Disable foreign keys to allow dropping tables
         db.execute('PRAGMA foreign_keys=OFF;')
-        
-        # Get all tables
         tables = db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         for table in tables:
-            if table[0] != 'sqlite_sequence': # Optional: keep sequence or not? Better to drop.
-                db.execute(f"DROP TABLE IF EXISTS {table[0]}")
-                
+            name = table[0]
+            if name in _KNOWN_TABLES:
+                # Use double-quoted identifier to safely handle any table name
+                db.execute(f'DROP TABLE IF EXISTS "{name}"')
         db.commit()
-        
+
         # 3. Re-initialize
         init_db()
-        
+
         flash(f'Database has been reset to factory settings. A backup was saved as {backup_filename}.', 'success')
-        
+
     except Exception as e:
-        import logging
         logging.error(f"Reset failed: {e}", exc_info=True)
         flash('Database reset failed. Check logs.', 'error')
-        
+
     return redirect(url_for('admin.backups'))
 
 
@@ -961,7 +987,6 @@ def check_updates():
         return {'available': False, 'error': f"No releases found (GitHub {resp.status_code})"}
             
     except Exception as e:
-        import logging
         logging.error(f"Check updates failed: {e}", exc_info=True)
         return {'available': False, 'error': 'Failed to check for updates.'}
 

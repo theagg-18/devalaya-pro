@@ -4,6 +4,7 @@ import json
 import shutil
 import mimetypes
 import sys
+import getpass
 
 # Append root to path to import version
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,7 +24,7 @@ def create_release():
     print(f"--- Devalaya Release Publisher v{VERSION} ---")
     print(f"Target Repo: {REPO}")
     
-    token = input("Enter GitHub Personal Access Token (repo scope): ").strip()
+    token = getpass.getpass("Enter GitHub Personal Access Token (repo scope): ").strip()
     if not token:
         print("Token required.")
         return
@@ -53,15 +54,43 @@ def create_release():
 
     resp = requests.post(api_url, headers=headers, json=payload)
     
+    data = None
     if resp.status_code == 201:
         data = resp.json()
         print(f"\n[SUCCESS] Release created: {data.get('html_url')}")
-        
+    elif resp.status_code == 422:
+        print(f"\n[INFO] Release v{VERSION} already exists. Fetching details...")
+        # Fetch existing release by tag
+        get_url = f"https://api.github.com/repos/{REPO}/releases/tags/v{VERSION}"
+        get_resp = requests.get(get_url, headers=headers)
+        if get_resp.status_code == 200:
+            data = get_resp.json()
+            print(f"[SUCCESS] Found existing release: {data.get('html_url')}")
+        else:
+            print(f"[ERROR] Could not fetch existing release: {get_resp.status_code}")
+            return
+    else:
+        print(f"\n[ERROR] Failed to create release: {resp.status_code}")
+        print(resp.text)
+        return
+
+    if data:
         # Check for dist folder and offer to upload
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # We want to upload the EXE specifically if available, or the zip
+        # The user asked for "upload the exe file"
+        
+        # Check for EXE in dist
+        exe_path = os.path.join(base_dir, "dist", "DevalayaBilling.exe")
+        
+        # Check for Zip (Optional, but let's prioritize EXE as per request)
+        # Or checking dist dir generally
         dist_dir = os.path.join(base_dir, "dist")
         
-        if os.path.exists(dist_dir) and input("\nFound 'dist' folder. Zip and upload portable release? (y/n): ").lower() == 'y':
+        if os.path.exists(exe_path) and input(f"\nFound 'DevalayaBilling.exe'. Upload this asset? (y/n): ").lower() == 'y':
+            upload_asset(data['upload_url'], exe_path, token)
+            
+        elif os.path.exists(dist_dir) and input("\nFound 'dist' folder (but no EXE?). Zip and upload portable release? (y/n): ").lower() == 'y':
             zip_name = f"Devalaya-Portable-v{VERSION}.zip"
             zip_path = os.path.join(base_dir, zip_name)
             
@@ -73,9 +102,6 @@ def create_release():
             # Cleanup zip
             if os.path.exists(zip_path):
                 os.remove(zip_path)
-    else:
-        print(f"\n[ERROR] Failed to create release: {resp.status_code}")
-        print(resp.text)
 
 def upload_asset(upload_url, file_path, token):
     print(f"Uploading {os.path.basename(file_path)}...")
