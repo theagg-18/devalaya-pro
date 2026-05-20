@@ -1,4 +1,6 @@
 from flask import Flask, render_template, g
+from flask_wtf.csrf import CSRFProtect
+from extensions import limiter
 from config import Config
 from database import close_db, init_db
 from routes.admin import admin_bp
@@ -21,13 +23,13 @@ if getattr(sys, 'frozen', False):
 else:
     basedir = os.path.dirname(os.path.abspath(__file__))
 
-app = Flask(__name__, 
+app = Flask(__name__,
             static_folder=os.path.join(basedir, 'static'),
             template_folder=os.path.join(basedir, 'templates'))
 
-
-
 app.config.from_object(Config)
+csrf = CSRFProtect(app)
+limiter.init_app(app)
 
 # Configure Logging
 import logging
@@ -36,13 +38,12 @@ from logging.handlers import RotatingFileHandler
 if not app.debug:
     if not os.path.exists('logs'):
         os.mkdir('logs')
-    file_handler = RotatingFileHandler('logs/error.log', maxBytes=10240, backupCount=10)
+    file_handler = RotatingFileHandler('logs/app.log', maxBytes=1024000, backupCount=10)
     file_handler.setFormatter(logging.Formatter(
         '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-    file_handler.setLevel(logging.ERROR)
+    file_handler.setLevel(logging.WARNING)
     app.logger.addHandler(file_handler)
-
-    app.logger.setLevel(logging.INFO)
+    app.logger.setLevel(logging.WARNING)
     app.logger.info('Devalaya Billing System startup')
 else:
     logging.basicConfig(level=logging.INFO)
@@ -96,19 +97,24 @@ def from_json_filter(value):
         if not value:
             return {}
         return json.loads(value)
-    except:
+    except Exception:
         return {}
 
 @app.context_processor
 def inject_settings():
+    from flask import request
     from database import get_cached_settings
     from routes.cashier import STARS
     import datetime
-    
+
+    # Skip expensive DB lookup for paths that don't render templates
+    if request.path.startswith('/static') or request.path == '/health':
+        return {}
+
     settings, theme_css = get_cached_settings()
-    
+
     star_map = {s['eng']: s['mal'] for s in STARS}
-    
+
     return {
         'temple_settings': settings,
         'now_year': now_ist().year,
@@ -155,4 +161,4 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(host='0.0.0.0', port=5000, debug=debug_mode)
 
-# Trigger Reload v1.5.1
+# Trigger Reload v1.7.0
