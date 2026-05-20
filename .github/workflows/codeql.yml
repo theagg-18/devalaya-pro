@@ -38,10 +38,6 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
           queries: security-extended,security-and-quality
-          packs: >-
-            ${{ matrix.language == 'python' &&
-              'codeql/python-queries,codeql/python-security-and-quality' ||
-              'codeql/javascript-queries,codeql/javascript-security-and-quality' }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
