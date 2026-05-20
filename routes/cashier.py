@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, g, session
+from flask import Blueprint, render_template, request, flash, redirect, url_for, g, session, current_app
 from database import get_db
 from routes.auth import login_required
 from utils.timezone_utils import now_ist, IST, format_ist_datetime, parse_db_timestamp, get_ist_timestamp
@@ -130,10 +130,10 @@ def history():
          params.append(payment_status_filter)
     
     if query:
-        # Search by Bill No or Devotee Name (Global Search)
-        sql += ' AND (b.bill_no LIKE ? OR b.devotee_name LIKE ?)'
+        # Search by Bill No, Devotee Name, or Phone
+        sql += ' AND (b.bill_no LIKE ? OR b.devotee_name LIKE ? OR b.phone LIKE ?)'
         wildcard = f'%{query}%'
-        params.extend([wildcard, wildcard])
+        params.extend([wildcard, wildcard, wildcard])
         
         # Explicitly clear date filter so UI shows we searched everywhere
         date_filter = ''
@@ -182,50 +182,24 @@ def history():
             WHERE bi.bill_id = ?
         ''', (bill['id'],)).fetchall()
         
-        # Format Dates
-        try:
-             from datetime import datetime as dt, timezone
-             
-             # Format created_at
-             if b_dict.get('created_at'):
-                 raw_ts = b_dict['created_at']
-                 if isinstance(raw_ts, str):
-                     # Handle potential ISO format with or without T, and microseconds
-                     # Simple approach: try parsing common formats
-                     try:
-                        ts_obj = dt.strptime(raw_ts, '%Y-%m-%d %H:%M:%S')
-                     except ValueError:
-                        try:
-                            # Try with T separator
-                            ts_obj = dt.strptime(raw_ts, '%Y-%m-%dT%H:%M:%S')
-                        except ValueError:
-                             # Try with microseconds
-                             ts_obj = dt.strptime(raw_ts.split('.')[0], '%Y-%m-%d %H:%M:%S')
-                      
-                     # Assume DB timestamp is IST
-                     local_ts = ts_obj.replace(tzinfo=IST)
-                     b_dict['created_at'] = format_ist_datetime(local_ts, '%d-%m-%Y %I:%M %p')
-                 elif isinstance(raw_ts, dt):
-                       # If it's already a datetime object, assume it's IST from SQL
-                       local_ts = raw_ts.replace(tzinfo=IST)
-                       b_dict['created_at'] = format_ist_datetime(local_ts, '%d-%m-%Y %I:%M %p')
+        # Format Dates using centralised helpers
+        if b_dict.get('created_at'):
+            raw_ts = b_dict['created_at']
+            if isinstance(raw_ts, str):
+                parsed = parse_db_timestamp(raw_ts)
+                if parsed:
+                    b_dict['created_at'] = format_ist_datetime(parsed, '%d-%m-%Y %I:%M %p')
+            elif hasattr(raw_ts, 'strftime'):
+                b_dict['created_at'] = format_ist_datetime(raw_ts.replace(tzinfo=IST), '%d-%m-%Y %I:%M %p')
 
-             # Format scheduled_date
-             if b_dict.get('scheduled_date'):
-                 raw_date = b_dict['scheduled_date']
-                 if isinstance(raw_date, str):
-                     try:
-                        date_obj = dt.strptime(raw_date, '%Y-%m-%d')
-                        b_dict['scheduled_date'] = date_obj.strftime('%d-%m-%Y')
-                     except:
-                        pass # Keep original string if parse fails
-                 elif hasattr(raw_date, 'strftime'):
-                     b_dict['scheduled_date'] = raw_date.strftime('%d-%m-%Y')
-                     
-        except Exception as e:
-            print(f"Date formatting error: {e}")
-            import traceback
-            traceback.print_exc()
+        if b_dict.get('scheduled_date'):
+            raw_date = b_dict['scheduled_date']
+            if isinstance(raw_date, str):
+                parsed_date = parse_db_timestamp(raw_date + ' 00:00:00')
+                if parsed_date:
+                    b_dict['scheduled_date'] = parsed_date.strftime('%d-%m-%Y')
+            elif hasattr(raw_date, 'strftime'):
+                b_dict['scheduled_date'] = raw_date.strftime('%d-%m-%Y')
             
         bill_list.append(b_dict)
     
@@ -273,24 +247,28 @@ def mark_paid(bill_id):
 def update_bill_status():
     data = request.json
     bill_no = data.get('bill_no')
-    status = data.get('status') # 'paid' or 'pending'
+    status = data.get('status')
     phone = data.get('phone')
-    
+
     if not bill_no or not status:
         return {'status': 'error', 'message': 'Missing parameters'}
-        
-    db = get_db()
-    
-    if status == 'pending':
-        # Update phone if provided
-        db.execute("UPDATE bills SET payment_status = ?, phone = ? WHERE bill_no = ?", (status, phone, bill_no))
-    else:
-        # If paid, record who received it AND DATE
-        pay_date = get_ist_timestamp()
-        db.execute("UPDATE bills SET payment_status = ?, payment_received_by = ?, payment_date = ? WHERE bill_no = ?", (status, g.user['id'], pay_date, bill_no))
-        
-    db.commit()
 
+    if status not in ('paid', 'pending'):
+        return {'status': 'error', 'message': 'Invalid status value'}, 400
+
+    db = get_db()
+
+    if status == 'pending':
+        db.execute("UPDATE bills SET payment_status = ?, phone = ? WHERE bill_no = ?",
+                   (status, phone, bill_no))
+    else:
+        pay_date = get_ist_timestamp()
+        db.execute(
+            "UPDATE bills SET payment_status = ?, payment_received_by = ?, payment_date = ? WHERE bill_no = ?",
+            (status, g.user['id'], pay_date, bill_no)
+        )
+
+    db.commit()
     return {'status': 'success'}
 
 @cashier_bp.route('/billing/unified')
@@ -362,10 +340,18 @@ def update_cart():
         
     elif data['action'] == 'add':
         item_id = int(data['id'])
-        name = html.escape(data.get('name', ''))
-        amount = float(data['amount'])
-        
-        # Check if item exists
+        # Always re-fetch price/name/type from DB — never trust client-supplied values
+        db = get_db()
+        row = db.execute(
+            'SELECT id, name, amount, type FROM puja_master WHERE id = ? AND is_active = 1',
+            (item_id,)
+        ).fetchone()
+        if not row:
+            return {'status': 'error', 'message': 'Item not found'}, 404
+        name = row['name']
+        amount = row['amount']
+        item_type = row['type']
+
         found = False
         for item in cart['items']:
             if item['id'] == item_id:
@@ -380,7 +366,7 @@ def update_cart():
                 'amount': amount,
                 'count': 1,
                 'total': amount,
-                'type': html.escape(data.get('type', 'item'))  # Default to item if not provided
+                'type': item_type,
             })
             
     elif data['action'] == 'remove':
@@ -914,24 +900,22 @@ def checkout():
                 slips_data.append(summary_slip)
             # -------------------------------
 
-            # Render Template from DB
-            from flask import render_template_string
-            
-            # Ensure template content exists, else fallback? (DB init ensures it, but safe to check)
+            from jinja2.sandbox import SandboxedEnvironment
+
             if settings:
-                settings = dict(settings) # Convert Row to dict to ensure Jinja compatibility
+                settings = dict(settings)
             else:
                 settings = {}
 
             template_content = settings.get('print_template_content')
             if not template_content:
-                # Fallback purely for safety if migration failed
                 template_content = "<h1>Error: No Print Template Found. Contact Admin.</h1>"
-                
-            html_content = render_template_string(template_content, 
-                                         slips=slips_data, 
-                                         settings=settings, 
-                                         timestamp=timestamp)
+
+            _senv = SandboxedEnvironment()
+            _senv.filters.update(current_app.jinja_env.filters)
+            html_content = _senv.from_string(template_content).render(
+                slips=slips_data, settings=settings, timestamp=timestamp
+            )
             
             db.commit()
             if is_batch: session.pop('batch', None)
@@ -964,20 +948,53 @@ def checkout():
         return {'status': 'success', 'bill_no': bill_ids[0] if bill_ids else None, 'total_amount': total_amount_collected}
         
     except Exception as e:
-        import traceback
         import logging
         logging.error(f"Checkout error: {e}", exc_info=True)
-        with open('debug_checkout.log', 'w') as f:
-            f.write(str(e))
-            f.write(traceback.format_exc())
-            
         return {'status': 'error', 'message': 'An error occurred during checkout. Please check logs.'}
 
 @cashier_bp.route('/billing/cart/resume-draft', methods=['POST'])
 @login_required
 def resume_client_draft():
     data = request.json
-    session['cart'] = data['cart']
+    raw_cart = data.get('cart', {})
+    db = get_db()
+
+    # Re-fetch authoritative prices from DB — never trust client-supplied amounts
+    validated_items = []
+    for item in raw_cart.get('items', []):
+        try:
+            item_id = int(item['id'])
+        except (KeyError, ValueError, TypeError):
+            continue
+        row = db.execute(
+            'SELECT id, name, amount, type FROM puja_master WHERE id = ? AND is_active = 1',
+            (item_id,)
+        ).fetchone()
+        if not row:
+            continue
+        try:
+            count = max(1, int(item.get('count', 1)))
+        except (ValueError, TypeError):
+            count = 1
+        validated_items.append({
+            'id': row['id'],
+            'name': row['name'],
+            'amount': row['amount'],
+            'count': count,
+            'total': row['amount'] * count,
+            'type': row['type'],
+        })
+
+    validated_cart = {
+        'mode': html.escape(str(raw_cart.get('mode', ''))),
+        'devotee_name': html.escape(str(raw_cart.get('devotee_name', ''))),
+        'star': html.escape(str(raw_cart.get('star', ''))),
+        'scheduled_date': html.escape(str(raw_cart.get('scheduled_date', ''))),
+        'items': validated_items,
+        'total': sum(i['total'] for i in validated_items),
+    }
+
+    session['cart'] = validated_cart
     session.modified = True
     return {'status': 'success'}
 
@@ -1077,15 +1094,17 @@ def reprint_bill(bill_id):
                 'line_items': line_items,
                 'total': bill['total_amount']
             }
-            
+
             template_content = settings['print_template_content']
             if not template_content:
                 template_content = "<h1>Error: Print Template Missing</h1>"
-                
-            html_content = render_template_string(template_content, 
-                                         slips=[slip_data], 
-                                         settings=settings, 
-                                         timestamp=timestamp)
+
+            from jinja2.sandbox import SandboxedEnvironment
+            _senv = SandboxedEnvironment()
+            _senv.filters.update(current_app.jinja_env.filters)
+            html_content = _senv.from_string(template_content).render(
+                slips=[slip_data], settings=settings, timestamp=timestamp
+            )
                                          
             return {'status': 'print_web', 'content': html_content}
 
@@ -1130,17 +1149,13 @@ def reprint_bill(bill_id):
                 return {'status': 'success', 'message': f'Reprint sent to {printer_name}'}
                 
             except Exception as e:
-                import traceback
-                traceback.print_exc()
                 import logging
                 logging.error(f"Printer Error: {e}", exc_info=True)
                 return {'status': 'error', 'message': 'Printer Error. Please check the logs.'}
-        
+
     except Exception as e:
-        import traceback
         import logging
         logging.error(f"Print Bill Action Failed: {e}", exc_info=True)
-        traceback.print_exc()
         return {'status': 'error', 'message': 'An error occurred while printing. Check logs.'}
 
 @cashier_bp.route('/billing/cancel/<int:bill_id>', methods=['POST'])
@@ -1151,25 +1166,26 @@ def cancel_bill(bill_id):
         return {'status': 'error', 'message': 'Cancellation reason is mandatory.'}
 
     db = get_db()
-    
-    # Check if bill exists and is valid
+
     bill = db.execute('SELECT * FROM bills WHERE id = ?', (bill_id,)).fetchone()
     if not bill:
         return {'status': 'error', 'message': 'Bill not found.'}
-        
+
     if bill['status'] == 'cancelled':
-         return {'status': 'error', 'message': 'Bill is already cancelled.'}
-    
-    # Permission Check (Cashier can only cancel their own? Or Admin only? User request implies Cashier can)
-    # We allow cashiers to cancel for now.
-    
+        return {'status': 'error', 'message': 'Bill is already cancelled.'}
+
+    # Cashiers may only cancel their own bills; admins can cancel any
+    if g.user['role'] == 'cashier' and bill['cashier_id'] != g.user['id']:
+        return {'status': 'error', 'message': 'You can only cancel your own bills.'}, 403
+
     try:
-        db.execute('UPDATE bills SET status=?, payment_status=?, remarks=? WHERE id=?', ('cancelled', 'cancelled', reason, bill_id))
+        db.execute('UPDATE bills SET status=?, payment_status=?, remarks=? WHERE id=?',
+                   ('cancelled', 'cancelled', reason, bill_id))
         db.commit()
         return {'status': 'success'}
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        import logging
+        logging.error(f"Cancel bill error: {e}", exc_info=True)
         return {'status': 'error', 'message': 'Database error during cancellation.'}
 
 @cashier_bp.route('/billing/edit/<int:bill_id>', methods=['POST'])
@@ -1249,6 +1265,6 @@ def edit_bill(bill_id):
         return {'status': 'success', 'redirect': url_for('cashier.start_billing', mode='unified')} # Force unified or original mode? Unified is safe.
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        import logging
+        logging.error(f"Edit bill error: {e}", exc_info=True)
         return {'status': 'error', 'message': 'Error setting up edit session.'}

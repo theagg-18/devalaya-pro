@@ -3,16 +3,42 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.6.2"
+__version__ = "1.7.0"
 __version_info__ = {
     "major": 1,
-    "minor": 6,
-    "patch": 2,
+    "minor": 7,
+    "patch": 0,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.7.0",
+        "date": "2026-05-20",
+        "changes": [
+            "Security: Rate limiting on login (10 attempts/min per IP)",
+            "Security: Client-supplied item prices no longer trusted — re-fetched from DB on cart add",
+            "Security: Werkzeug hash detection fixed (prefix-based, not '$' check)",
+            "Security: Cashiers restricted to cancelling only their own bills",
+            "Security: Logo upload validates actual image content (not just extension)",
+            "Security: Last active admin account cannot be deleted or deactivated",
+            "Security: Default admin PIN now stored hashed on first init",
+            "Security: Zip slip protection in update manager uses realpath comparison",
+            "Security: update-status endpoint validates status value (paid/pending only)",
+            "Enhancement: Session lifetime set to 8 hours (PERMANENT_SESSION_LIFETIME)",
+            "Enhancement: SECRET_KEY generates random fallback with warning if not set in env",
+            "Enhancement: PIN strength validation enforced on create and change (4-20 chars)",
+            "Enhancement: Phone number search added to cashier history and admin reports",
+            "Enhancement: inject_settings skips DB lookup for static/health paths",
+            "Fix: Log handler level corrected (WARNING, not ERROR); log file renamed to app.log",
+            "Fix: debug_checkout.log file write removed; uses structured logger",
+            "Fix: History date parsing uses centralised parse_db_timestamp helper",
+            "Fix: Database reset uses table allowlist, not raw f-string SQL",
+            "Chore: Inline import logging statements removed from all route functions",
+            "Chore: Flask-Limiter and Pillow added to dependencies"
+        ]
+    },
     {
         "version": "1.6.2",
         "date": "2026-01-25",

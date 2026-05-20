@@ -13,6 +13,17 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 
+def _safe_extract(zip_path, dest):
+    """Extract zip to dest, raising ValueError on any path-traversal attempt."""
+    dest = os.path.realpath(dest)
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        for member in zf.namelist():
+            target = os.path.realpath(os.path.join(dest, member))
+            # Must stay inside dest
+            if not (target.startswith(dest + os.sep) or target == dest):
+                raise ValueError(f"Unsafe path in update package: {member}")
+        zf.extractall(dest)
+
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_URL = "https://github.com/theagg-18/devalaya-pro"
@@ -218,8 +229,7 @@ def update_system(silent=False):
         if choice == 'y':
             print("Extracting update...")
             try:
-                with zipfile.ZipFile(update_zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(BASE_DIR)
+                _safe_extract(update_zip_path, BASE_DIR)
                 print("[+] Files extracted successfully.")
                 
                 # Backup/Rename the zip file so it doesn't prompt again
@@ -294,66 +304,56 @@ def update_system(silent=False):
             # Simple version compare
             current_ver = version.__version__
             print(f"[*] Current: {current_ver}, Latest: {latest_tag}")
-            
-            # Remove 'v' prefix for comparison if needed, but string match usually enough for equality
+
             if latest_tag == f"v{current_ver}" or latest_tag == current_ver:
                 print("[+] You are already using the latest version.")
                 return
 
-                print(f"[!] New version available: {latest_tag}")
-                choice = input("Do you want to download and install this update? (y/n): ").lower()
-                
-                if choice == 'y':
-                    print("Downloading update...")
-                    temp_zip = os.path.join(BASE_DIR, "temp_update.zip")
-                    
-                    # Download
-                    with urllib.request.urlopen(zip_url) as dl_resp, open(temp_zip, 'wb') as f:
-                        shutil.copyfileobj(dl_resp, f)
-                    
-                    print("Extracting update...")
-                    # GitHub zips have a root folder (e.g., devalaya-pro-v1.5.0-xyz/...)
-                    # We need to extract contents of that folder to BASE_DIR
-                    with zipfile.ZipFile(temp_zip, 'r') as zf:
-                        root_folder = zf.namelist()[0].split('/')[0]
-                        
-                        temp_extract_dir = os.path.join(BASE_DIR, "temp_extract")
-                        if os.path.exists(temp_extract_dir):
-                            shutil.rmtree(temp_extract_dir)
-                        os.makedirs(temp_extract_dir)
-                        
-                        zf.extractall(temp_extract_dir)
-                        
-                        # Move contents
-                        source_dir = os.path.join(temp_extract_dir, root_folder)
-                        for item in os.listdir(source_dir):
-                            s = os.path.join(source_dir, item)
-                            d = os.path.join(BASE_DIR, item)
-                            if os.path.exists(d):
-                                if os.path.isdir(d):
-                                    # shutil.copytree requires dest to not exist or dirs_exist_ok in py3.8+
-                                    # We can try to rely on overwrite loop or rmtree
-                                    # Safe fallback: copytree with dirs_exist_ok=True if available
-                                    if sys.version_info >= (3, 8):
-                                        shutil.copytree(s, d, dirs_exist_ok=True)
-                                    else:
-                                        # Manual merge for older python? Unlikely needed but safe:
-                                        # Just remove dest and copy
-                                        shutil.rmtree(d)
-                                        shutil.copytree(s, d)
+            print(f"[!] New version available: {latest_tag}")
+            choice = input("Do you want to download and install this update? (y/n): ").lower()
+
+            if choice == 'y':
+                print("Downloading update...")
+                temp_zip = os.path.join(BASE_DIR, "temp_update.zip")
+
+                with urllib.request.urlopen(zip_url) as dl_resp, open(temp_zip, 'wb') as f:
+                    shutil.copyfileobj(dl_resp, f)
+
+                print("Extracting update...")
+                with zipfile.ZipFile(temp_zip, 'r') as zf:
+                    _safe_extract(temp_zip, BASE_DIR)
+                    root_folder = zf.namelist()[0].split('/')[0]
+
+                    temp_extract_dir = os.path.join(BASE_DIR, "temp_extract")
+                    if os.path.exists(temp_extract_dir):
+                        shutil.rmtree(temp_extract_dir)
+                    os.makedirs(temp_extract_dir)
+
+                    zf.extractall(temp_extract_dir)
+
+                    source_dir = os.path.join(temp_extract_dir, root_folder)
+                    for item in os.listdir(source_dir):
+                        s = os.path.join(source_dir, item)
+                        d = os.path.join(BASE_DIR, item)
+                        if os.path.exists(d):
+                            if os.path.isdir(d):
+                                if sys.version_info >= (3, 8):
+                                    shutil.copytree(s, d, dirs_exist_ok=True)
                                 else:
-                                    os.remove(d)
-                                    shutil.copy2(s, d)
-                            else:
-                                if os.path.isdir(s):
+                                    shutil.rmtree(d)
                                     shutil.copytree(s, d)
-                                else:
-                                    shutil.copy2(s, d)
-                                    
-                    # Cleanup
-                    os.remove(temp_zip)
-                    shutil.rmtree(temp_extract_dir)
-                    print("[+] Update installed successfully.")
+                            else:
+                                os.remove(d)
+                                shutil.copy2(s, d)
+                        else:
+                            if os.path.isdir(s):
+                                shutil.copytree(s, d)
+                            else:
+                                shutil.copy2(s, d)
+
+                os.remove(temp_zip)
+                shutil.rmtree(temp_extract_dir)
+                print("[+] Update installed successfully.")
                     
         except Exception as e:
             print(f"[-] Online update failed: {e}")

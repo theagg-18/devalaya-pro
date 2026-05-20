@@ -373,10 +373,12 @@ def init_db():
         )
     ''')
     
-    # Seed default admin if not exists
+    # Seed default admin if not exists (PIN stored hashed)
     c.execute('SELECT count(*) FROM users WHERE role="admin"')
     if c.fetchone()[0] == 0:
-        c.execute('INSERT INTO users (username, pin, role) VALUES (?, ?, ?)', ('admin', '1234', 'admin'))
+        from werkzeug.security import generate_password_hash
+        c.execute('INSERT INTO users (username, pin, role) VALUES (?, ?, ?)',
+                  ('admin', generate_password_hash('1234'), 'admin'))
 
     # 4. Puja/Item Master
     c.execute('''
