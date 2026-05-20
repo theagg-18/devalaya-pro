@@ -181,9 +181,11 @@ def get_nakshatra(date_obj, lat=DEFAULT_LAT, lon=DEFAULT_LON):
             "nakshatra_mal": NAKSHATRAS_MAL[idx]
         }
     except Exception as e:
+        import logging
+        logging.error(f"get_nakshatra failed: {e}", exc_info=True)
         return {
             "status": "error",
-            "message": str(e)
+            "message": "Nakshatra calculation failed"
         }
 
 @lru_cache(maxsize=365)
