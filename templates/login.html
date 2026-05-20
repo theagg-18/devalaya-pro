@@ -10,6 +10,7 @@
             <h2 style="margin-top: 1rem;">Login</h2>
         </div>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="username">User ID / Name</label>
                 <input type="text" id="username" name="username" required autofocus>

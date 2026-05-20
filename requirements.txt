@@ -1,9 +1,13 @@
 waitress>=3.0.1
+gunicorn>=21.2.0
 psutil
 Werkzeug
 requests
 Flask
+Flask-WTF
+Flask-Limiter
 python-dotenv
 skyfield
 zeroconf
 ifaddr
+Pillow
