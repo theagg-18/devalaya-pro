@@ -34,6 +34,9 @@ def get_star():
         lat, lon = _get_location()
         date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
         star = get_nakshatra(date_obj, lat, lon)
+        if star.get('status') == 'error':
+            return jsonify({'status': 'error', 'message': 'Star calculation failed'}), 500
+
         mal_date = get_malayalam_date(date_obj, lat, lon)
 
         return jsonify({
