@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"   # localhost only — cloudflared connects internally
+    volumes:
+      - devalaya_data:/data
+      - devalaya_uploads:/app/static/uploads
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DB_PATH: /data/temple.db
+      BACKUP_PATH: /data/backups
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  devalaya_data:
+  devalaya_uploads:

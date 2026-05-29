@@ -3,7 +3,7 @@
 This guide explains how to convert your standalone executable (`DevalayaBilling.exe`) into a professional Windows Installer (`setup.exe`) using **Inno Setup**.
 
 ## Prerequisites
-1.  **Build the Exe First**: Ensure you have successfully run `python build_exe.py` and have the `dist\DevalayaBilling.exe` file.
+1.  **Build the Exe First**: Ensure you have successfully run `python scripts/build_exe.py` and have the `dist\DevalayaBilling.exe` file.
 2.  **Download Inno Setup**:
     *   Go to: [https://jrsoftware.org/isdl.php](https://jrsoftware.org/isdl.php)
     *   Download and install "Inno Setup 6.x.x".

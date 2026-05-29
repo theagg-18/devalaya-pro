@@ -14,7 +14,7 @@ When you have made code changes and want to release a new version (e.g., v1.6.1)
 1.  Open your terminal in the project folder.
 2.  Run the build command:
     ```powershell
-    python build_exe.py
+    python scripts/build_exe.py
     ```
     *This generates a new `dist\DevalayaBilling.exe` with your latest code.*
 

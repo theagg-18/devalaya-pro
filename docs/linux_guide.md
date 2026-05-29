@@ -34,7 +34,7 @@ If you want a single file that works without users installing Python/Pip (e.g., 
 3.  **Run Build Script**:
     The same script works!
     ```bash
-    python3 build_exe.py
+    python3 scripts/build_exe.py
     ```
 4.  **Result**:
     *   Output: `dist/DevalayaBilling` (No extension).
