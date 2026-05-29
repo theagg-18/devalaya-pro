@@ -7,7 +7,7 @@ This document explains how to build and use the standalone executable (`.exe`) v
 To create the `.exe` file, run the following command in your project directory:
 
 ```powershell
-python build_exe.py
+python scripts/build_exe.py
 ```
 
 This script will:
@@ -48,7 +48,7 @@ To access the billing system from other devices (Tablets, Phones, other PCs) on 
 
 ## Updates
 To update the application:
-1. Build the new version using `python build_exe.py`.
+1. Build the new version using `python scripts/build_exe.py`.
 2. Replace the old `DevalayaBilling.exe` with the new one.
 3. **Keep** your `temple.db` and `backups` folder; do not delete them.
 

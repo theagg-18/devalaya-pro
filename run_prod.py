@@ -65,7 +65,7 @@ def start_production():
     else:
         print("Running with Gunicorn...")
         # For Linux/RPi, we use the config file we created
-        subprocess.run(["gunicorn", "-c", "gunicorn_config.py", "wsgi:app"])
+        subprocess.run(["gunicorn", "-c", "deploy/gunicorn_config.py", "wsgi:app"])
 
 if __name__ == "__main__":
     try:
