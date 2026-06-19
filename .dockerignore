@@ -1,0 +1,15 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git
+.env
+temple.db
+backups/
+updates/
+logs/
+*.log
+dist/
+*.zip
+*.bak
+.gitignore

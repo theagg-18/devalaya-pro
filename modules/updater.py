@@ -88,7 +88,9 @@ def perform_update(update_source, is_url=True):
         UPDATE_STATUS = "Step 3/7: Downloading & Extracting..."
         os.makedirs(TEMP_DIR)
         
-        zip_path = os.path.join(BASE_DIR, 'update_package.zip')
+        # Manager (manager.py) installs the offline package named exactly 'update.zip'.
+        # Must match manager.UPDATE_ZIP_NAME or the handover silently no-ops.
+        zip_path = os.path.join(BASE_DIR, 'update.zip')
         
         if is_url:
             # Download from GitHub or URL
@@ -126,9 +128,11 @@ def perform_update(update_source, is_url=True):
         else:
              subprocess.Popen(cmd, start_new_session=True)
              
+        # Keep MAINTENANCE_MODE True: the manager process now stops THIS server,
+        # extracts, and restarts it. Clearing the lock here would make the client
+        # overlay reload into a server that is about to be killed.
         UPDATE_STATUS = "Update Manager Started. Server will restart shortly."
-        MAINTENANCE_MODE = False 
-        
+
     except Exception as e:
         # Log full exception details server-side
         logging.error("Update failed, initiating rollback.", exc_info=True)

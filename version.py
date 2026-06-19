@@ -3,16 +3,27 @@ Devalaya Pro - Temple Billing System
 Version Configuration
 """
 
-__version__ = "1.7.0"
+__version__ = "1.7.1"
 __version_info__ = {
     "major": 1,
     "minor": 7,
-    "patch": 0,
+    "patch": 1,
     "release": "stable"
 }
 
 # Version History
 VERSION_HISTORY = [
+    {
+        "version": "1.7.1",
+        "date": "2026-06-19",
+        "changes": [
+            "Fix: Admin GitHub/offline update now installs — updater and manager agreed on 'update.zip' package name (handover was a silent no-op)",
+            "Fix: Update manager flattens GitHub zipball wrapper folder so files land at project root",
+            "Fix: Removed duplicate/broken extraction path in manager online update",
+            "Fix: stop_server NameError (psutil not imported) during update restart",
+            "Fix: Maintenance overlay persists through manager handover until server restarts"
+        ]
+    },
     {
         "version": "1.7.0",
         "date": "2026-05-20",

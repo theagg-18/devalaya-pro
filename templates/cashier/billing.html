@@ -149,6 +149,15 @@
                 <!-- Star of the selected date (defaults to today). Tap to apply. -->
                 <div id="dateStarBadge" class="pos-starline" onclick="autoSelectStar()"
                     title="Tap to set as the devotee's star" style="display: none;"></div>
+
+                <!-- Marks a genuine advance booking so it appears on the admin Pooja Calendar.
+                     Auto-ticks when a future date is chosen; tick manually to schedule for today. -->
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; margin-top: 8px; cursor: pointer;">
+                    <input type="checkbox" id="isScheduled" onchange="updateDetails()"
+                        {% if cart.is_scheduled %}checked{% endif %}
+                        style="width: 16px; height: 16px;">
+                    Booking for a specific date (show on calendar)
+                </label>
             </div>
         </div>
 
@@ -997,21 +1006,36 @@
         renderCart(res.cart);
     }
 
+    // True when the chosen date is a genuine booking: either a future/non-today
+    // date, or the cashier explicitly ticked the schedule box for a today booking.
+    function computeIsScheduled() {
+        const dateVal = document.getElementById('scheduledDate').value;
+        const today = new Date().toISOString().split('T')[0];
+        const box = document.getElementById('isScheduled');
+        // Auto-tick (and lock visual state) when a non-today date is picked
+        if (dateVal && dateVal !== today && box && !box.checked) {
+            box.checked = true;
+        }
+        return (box && box.checked) ? 1 : 0;
+    }
+
     async function updateDetails() {
         // if (MODE !== 'vazhipadu') return; // Unified mode needs this
         const name = document.getElementById('devName').value;
         const star = document.getElementById('devStar').value;
         const scheduled_date = document.getElementById('scheduledDate').value;
+        const is_scheduled = computeIsScheduled();
 
         // Keep client cart in sync so drafts/batch read fresh values
         if (CURRENT_CART) {
             CURRENT_CART.devotee_name = name;
             CURRENT_CART.star = star;
             CURRENT_CART.scheduled_date = scheduled_date;
+            CURRENT_CART.is_scheduled = is_scheduled;
         }
 
         await api('/cashier/billing/cart/update', {
-            action: 'set_details', name, star, scheduled_date
+            action: 'set_details', name, star, scheduled_date, is_scheduled
         });
     }
 
@@ -1024,6 +1048,8 @@
             document.getElementById('devName').value = '';
             document.getElementById('devStar').value = '';
             document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
+            const box = document.getElementById('isScheduled');
+            if (box) box.checked = false;
         }
     }
 
@@ -1062,7 +1088,8 @@
         const res = await api('/cashier/billing/batch/add', {
             name: document.getElementById('devName').value,
             star: document.getElementById('devStar').value,
-            scheduled_date: document.getElementById('scheduledDate').value
+            scheduled_date: document.getElementById('scheduledDate').value,
+            is_scheduled: computeIsScheduled()
         });
         if (res.status === 'success') {
             document.getElementById('batchCount').innerText = res.batch_count;
@@ -1718,6 +1745,8 @@
                 document.getElementById('devName').value = '';
                 document.getElementById('devStar').value = '';
                 document.getElementById('scheduledDate').value = new Date().toISOString().split('T')[0];
+                const rbox = document.getElementById('isScheduled');
+                if (rbox) rbox.checked = false;
                 document.getElementById('devName').focus();
 
                 renderCart({ items: [], total: 0 });

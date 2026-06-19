@@ -1,0 +1,157 @@
+{% extends "admin/layout.html" %}
+
+{% macro bill_line(b) %}
+<div class="cal-bill">
+    <div class="cal-bill-head">
+        <strong>{{ b.devotee_name or 'No name' }}</strong>
+        {% if b.star %}<span class="cal-star">{{ b.star }}</span>{% endif %}
+        {% if b.payment_status == 'pending' %}<span class="badge-pending">Pending</span>{% endif %}
+    </div>
+    <div class="cal-bill-items">
+        {% for it in b.line_items %}
+        <span class="tag tag-puja">{{ it.name }}{% if it.count and it.count > 1 %} ×{{ it.count }}{% endif %}</span>
+        {% endfor %}
+    </div>
+    <div class="cal-bill-meta">#{{ b.bill_no }} · ₹{{ "%.2f"|format(b.total_amount or 0) }}{% if b.phone %} · {{ b.phone }}{% endif %}</div>
+</div>
+{% endmacro %}
+
+{% macro list_group(title, items, badge_class, open) %}
+<details class="cal-group" {% if open %}open{% endif %}>
+    <summary>
+        <span class="badge {{ badge_class }}">{{ title }}</span>
+        <span class="cal-count">{{ items|length }}</span>
+    </summary>
+    {% if items %}
+    <button type="button" class="btn btn-secondary cal-print-btn"
+        onclick="bulkPrint([{% for b in items %}{{ b.id }},{% endfor %}])">Print all receipts ({{ items|length }})</button>
+    {% set ns = namespace(cur='') %}
+    {% for b in items %}
+        {% if b.scheduled_date != ns.cur %}
+            {% set ns.cur = b.scheduled_date %}
+            <h4 class="cal-date-head">{{ b.scheduled_date[8:10] }}-{{ b.scheduled_date[5:7] }}-{{ b.scheduled_date[0:4] }}</h4>
+        {% endif %}
+        {{ bill_line(b) }}
+    {% endfor %}
+    {% else %}
+    <p class="cal-empty">No scheduled poojas.</p>
+    {% endif %}
+</details>
+{% endmacro %}
+
+{% block admin_content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+        <h2>Pooja Calendar</h2>
+        <div class="view-toggle">
+            <button type="button" id="btnCalendar" class="btn btn-secondary" onclick="setView('calendar')">Calendar</button>
+            <button type="button" id="btnList" class="btn btn-secondary" onclick="setView('list')">List</button>
+        </div>
+    </div>
+
+    <!-- ===== Calendar view ===== -->
+    <div id="viewCalendar">
+        <div class="cal-nav">
+            <a class="btn btn-secondary" href="{{ url_for('admin.pooja_calendar', year=prev_year, month=prev_month) }}">&larr; Prev</a>
+            <span class="cal-month-label">{{ month_label }}</span>
+            <a class="btn btn-secondary" href="{{ url_for('admin.pooja_calendar', year=next_year, month=next_month) }}">Next &rarr;</a>
+        </div>
+
+        <div class="calendar-grid cal-head-row">
+            {% for wd in weekday_names %}<div class="cal-weekday">{{ wd }}</div>{% endfor %}
+        </div>
+
+        {% for week in weeks %}
+        <div class="calendar-grid">
+            {% for cell in week %}
+            <div class="calendar-cell{% if cell.day == 0 %} cal-empty-cell{% endif %}{% if cell.is_today %} cal-today{% endif %}">
+                {% if cell.day != 0 %}
+                <div class="cal-daynum">{{ cell.day }}{% if cell.bills %}<span class="cal-dot">{{ cell.bills|length }}</span>{% endif %}</div>
+                {% if cell.bills %}
+                <details class="cal-cell-details">
+                    <summary>{{ cell.bills|length }} pooja{{ 's' if cell.bills|length != 1 else '' }}</summary>
+                    <button type="button" class="btn btn-secondary cal-print-btn"
+                        onclick="bulkPrint([{% for b in cell.bills %}{{ b.id }},{% endfor %}])">Print {{ cell.bills|length }} receipt{{ 's' if cell.bills|length != 1 else '' }}</button>
+                    {% for b in cell.bills %}{{ bill_line(b) }}{% endfor %}
+                </details>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ===== List view ===== -->
+    <div id="viewList" style="display:none;">
+        <form method="get" class="cal-filter">
+            <input type="hidden" name="view" value="list">
+            <label>From <input type="date" name="start_date" value="{{ list_start }}" style="width:auto;"></label>
+            <label>To <input type="date" name="end_date" value="{{ list_end }}" style="width:auto;"></label>
+            <button type="submit" class="btn btn-primary">Apply</button>
+        </form>
+
+        {{ list_group('Today', group_today, 'badge-today', True) }}
+        {{ list_group('Upcoming', group_upcoming, 'badge-upcoming', True) }}
+        {{ list_group('Past', group_past, 'badge-past', False) }}
+    </div>
+</div>
+
+<script>
+function printContentInIframe(content) {
+    var iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0'; iframe.style.bottom = '0';
+    iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    var doc = iframe.contentWindow.document;
+    doc.open(); doc.write(content); doc.close();
+    iframe.contentWindow.focus();
+    setTimeout(function () { iframe.contentWindow.print(); }, 500);
+}
+
+async function bulkPrint(ids) {
+    ids = (ids || []).filter(function (x) { return !!x; });
+    if (ids.length === 0) { alert('No receipts to print.'); return; }
+    try {
+        var res = await fetch('/admin/calendar/bulk-print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bill_ids: ids })
+        });
+        if (!res.ok) { throw new Error('Server ' + res.status); }
+        var data = await res.json();
+        if (data.status === 'print_web') {
+            printContentInIframe(data.content);
+        } else {
+            alert('Error: ' + (data.message || 'Unknown'));
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Print failed: ' + e.message);
+    }
+}
+
+function setView(v) {
+    var cal = document.getElementById('viewCalendar');
+    var list = document.getElementById('viewList');
+    var bc = document.getElementById('btnCalendar');
+    var bl = document.getElementById('btnList');
+    if (v === 'list') {
+        cal.style.display = 'none'; list.style.display = '';
+        bl.classList.add('btn-primary'); bl.classList.remove('btn-secondary');
+        bc.classList.add('btn-secondary'); bc.classList.remove('btn-primary');
+    } else {
+        cal.style.display = ''; list.style.display = 'none';
+        bc.classList.add('btn-primary'); bc.classList.remove('btn-secondary');
+        bl.classList.add('btn-secondary'); bl.classList.remove('btn-primary');
+    }
+    localStorage.setItem('poojaCalView', v);
+}
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var v = params.get('view') || localStorage.getItem('poojaCalView') || 'calendar';
+    setView(v);
+})();
+</script>
+{% endblock %}
