@@ -623,6 +623,200 @@ def reports():
                            current_page=page,
                            total_pages=total_pages)
 
+def _fetch_scheduled_bills(db, start_date, end_date):
+    """Return scheduled (non-draft, non-cancelled) bills in [start_date, end_date]
+    with their line items attached. Dates are ISO 'YYYY-MM-DD' strings."""
+    rows = db.execute('''
+        SELECT b.*, u.username as cashier_name
+        FROM bills b
+        JOIN users u ON b.cashier_id = u.id
+        WHERE b.scheduled_date IS NOT NULL
+          AND b.scheduled_date BETWEEN ? AND ?
+          AND b.is_scheduled = 1
+          AND b.status NOT IN ('draft', 'cancelled')
+        ORDER BY b.scheduled_date ASC, b.created_at ASC
+    ''', (start_date, end_date)).fetchall()
+
+    bills = []
+    for row in rows:
+        b = dict(row)
+        # scheduled_date may come back as datetime.date (DATE column) or str — normalize to ISO string
+        sd = b.get('scheduled_date')
+        if hasattr(sd, 'isoformat'):
+            b['scheduled_date'] = sd.isoformat()
+        else:
+            b['scheduled_date'] = str(sd)[:10]
+        b['line_items'] = db.execute('''
+            SELECT bi.count, bi.total, pm.name
+            FROM bill_items bi
+            JOIN puja_master pm ON bi.puja_id = pm.id
+            WHERE bi.bill_id = ?
+        ''', (row['id'],)).fetchall()
+        bills.append(b)
+    return bills
+
+
+@admin_bp.route('/calendar')
+def pooja_calendar():
+    import calendar as _cal
+
+    db = get_db()
+    today = now_ist().date()
+
+    # --- Month grid params ---
+    year = request.args.get('year', today.year, type=int)
+    month = request.args.get('month', today.month, type=int)
+    if month < 1 or month > 12:
+        year, month = today.year, today.month
+
+    month_first = datetime.date(year, month, 1)
+    last_day = _cal.monthrange(year, month)[1]
+    month_last = datetime.date(year, month, last_day)
+
+    # Prev / next month for nav
+    prev_month = (month_first - datetime.timedelta(days=1))
+    next_month = (month_last + datetime.timedelta(days=1))
+
+    # --- List view range params (default: 30 days back to 30 days ahead) ---
+    list_start = request.args.get('start_date') or (today - datetime.timedelta(days=30)).isoformat()
+    list_end = request.args.get('end_date') or (today + datetime.timedelta(days=30)).isoformat()
+
+    # Span both ranges in one fetch to keep it simple
+    fetch_start = min(month_first.isoformat(), list_start)
+    fetch_end = max(month_last.isoformat(), list_end)
+    bills = _fetch_scheduled_bills(db, fetch_start, fetch_end)
+
+    # Index bills by scheduled_date string
+    by_date = {}
+    for b in bills:
+        by_date.setdefault(b['scheduled_date'], []).append(b)
+
+    # --- Build calendar weeks (Mon-Sun) for the selected month ---
+    _cal.setfirstweekday(_cal.MONDAY)
+    weeks = []
+    for week in _cal.monthcalendar(year, month):
+        cells = []
+        for day in week:
+            if day == 0:
+                cells.append({'day': 0, 'date': None, 'bills': [], 'is_today': False})
+            else:
+                d = datetime.date(year, month, day)
+                iso = d.isoformat()
+                cells.append({
+                    'day': day,
+                    'date': iso,
+                    'bills': by_date.get(iso, []),
+                    'is_today': (d == today),
+                })
+        weeks.append(cells)
+
+    # --- Build list-view groups (today / upcoming / past) from list range ---
+    today_iso = today.isoformat()
+    group_today, group_upcoming, group_past = [], [], []
+    for b in bills:
+        sd = b['scheduled_date']
+        if sd < list_start or sd > list_end:
+            continue
+        if sd == today_iso:
+            group_today.append(b)
+        elif sd > today_iso:
+            group_upcoming.append(b)
+        else:
+            group_past.append(b)
+    # Past most-recent first
+    group_past.sort(key=lambda b: (b['scheduled_date'], b.get('created_at') or ''), reverse=True)
+
+    return render_template('admin/calendar.html',
+                           weeks=weeks,
+                           month_label=month_first.strftime('%B %Y'),
+                           year=year, month=month,
+                           prev_year=prev_month.year, prev_month=prev_month.month,
+                           next_year=next_month.year, next_month=next_month.month,
+                           weekday_names=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                           group_today=group_today,
+                           group_upcoming=group_upcoming,
+                           group_past=group_past,
+                           list_start=list_start, list_end=list_end,
+                           today_iso=today_iso)
+
+
+@admin_bp.route('/calendar/bulk-print', methods=['POST'])
+def calendar_bulk_print():
+    """Render one combined print document for many scheduled bills.
+    Reuses the temple's stored print template (which loops `slips`)."""
+    from routes.cashier import STARS
+    from datetime import datetime as dt
+    from jinja2.sandbox import SandboxedEnvironment
+
+    db = get_db()
+    data = request.json or {}
+    raw_ids = data.get('bill_ids', [])
+    if not raw_ids:
+        return {'status': 'error', 'message': 'No bills selected'}
+    try:
+        bill_ids = [int(x) for x in raw_ids]
+    except (TypeError, ValueError):
+        return {'status': 'error', 'message': 'Invalid bill ids'}
+
+    settings_row = db.execute('SELECT * FROM temple_settings WHERE id=1').fetchone()
+    if not settings_row:
+        return {'status': 'error', 'message': 'Settings not found'}
+    settings = dict(settings_row)
+    template_content = settings.get('print_template_content') or "<h1>Print template missing</h1>"
+
+    star_map = {s['eng']: s['mal'] for s in STARS}
+
+    placeholders = ','.join('?' * len(bill_ids))
+    rows = db.execute(
+        f"SELECT * FROM bills WHERE id IN ({placeholders}) AND status != 'cancelled'",
+        bill_ids
+    ).fetchall()
+    by_id = {r['id']: r for r in rows}
+
+    slips = []
+    for bid in bill_ids:  # preserve requested order
+        row = by_id.get(bid)
+        if not row:
+            continue
+        bill = dict(row)
+        items = db.execute('''
+            SELECT bi.count, bi.total, pm.name
+            FROM bill_items bi JOIN puja_master pm ON bi.puja_id = pm.id
+            WHERE bi.bill_id = ?
+        ''', (bid,)).fetchall()
+
+        sd = bill.get('scheduled_date')
+        s_date_str = None
+        if sd:
+            try:
+                if isinstance(sd, str):
+                    s_date_str = dt.strptime(sd[:10], '%Y-%m-%d').strftime('%d-%m-%Y')
+                elif hasattr(sd, 'strftime'):
+                    s_date_str = sd.strftime('%d-%m-%Y')
+            except Exception:
+                s_date_str = str(sd)
+
+        slips.append({
+            'bill_no': bill['bill_no'],
+            'devotee_name': bill['devotee_name'],
+            'star': star_map.get(bill['star'], bill['star']),
+            'scheduled_date': s_date_str,
+            'line_items': [{'name': it['name'], 'count': it['count'], 'total': it['total']} for it in items],
+            'total': bill['total_amount'],
+        })
+
+    if not slips:
+        return {'status': 'error', 'message': 'No printable bills (cancelled or missing).'}
+
+    timestamp = format_ist_datetime(now_ist(), '%d-%m-%Y %H:%M')
+    _senv = SandboxedEnvironment()
+    _senv.filters.update(current_app.jinja_env.filters)
+    html_content = _senv.from_string(template_content).render(
+        slips=slips, settings=settings, timestamp=timestamp
+    )
+    return {'status': 'print_web', 'content': html_content, 'count': len(slips)}
+
+
 @admin_bp.route('/reports/export')
 def export_reports():
     import csv

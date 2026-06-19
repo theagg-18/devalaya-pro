@@ -337,13 +337,15 @@ def update_cart():
             'total': 0,
             'devotee_name': '',
             'star': '',
-            'scheduled_date': today
+            'scheduled_date': today,
+            'is_scheduled': 0
         }
         
     elif data['action'] == 'set_details':
         cart['devotee_name'] = html.escape(data.get('name', ''))
         cart['star'] = html.escape(data.get('star', ''))
         cart['scheduled_date'] = html.escape(data.get('scheduled_date', ''))
+        cart['is_scheduled'] = 1 if data.get('is_scheduled') else 0
         
     elif data['action'] == 'add':
         item_id = int(data['id'])
@@ -463,19 +465,22 @@ def add_to_batch():
         cart['star'] = html.escape(data.get('star', ''))
     if data.get('scheduled_date'):
         cart['scheduled_date'] = html.escape(data.get('scheduled_date', ''))
+    if 'is_scheduled' in data:
+        cart['is_scheduled'] = 1 if data.get('is_scheduled') else 0
     session['cart'] = cart
     session.modified = True
 
     batch = session.get('batch', [])
 
     if replication_dates:
-        # Replicate Mode
+        # Replicate Mode — these are explicit future bookings
         import copy
         count_added = 0
         for date_str in replication_dates:
             # Deep copy to ensure unique objects
             cart_copy = copy.deepcopy(cart)
             cart_copy['scheduled_date'] = date_str
+            cart_copy['is_scheduled'] = 1
             batch.append(cart_copy)
             count_added += 1
     else:
@@ -485,7 +490,7 @@ def add_to_batch():
     session['batch'] = batch
     
     # Clear cart but keep mode
-    session['cart'] = {'mode': cart.get('mode', 'vazhipadu'), 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': ''}
+    session['cart'] = {'mode': cart.get('mode', 'vazhipadu'), 'items': [], 'total': 0, 'devotee_name': '', 'star': '', 'scheduled_date': '', 'is_scheduled': 0}
     session.modified = True
     
     return {'status': 'success', 'batch_count': len(batch)}
@@ -579,6 +584,11 @@ def checkout():
             b_type = bill_data.get('mode', 'vazhipadu')
             draft_id = bill_data.get('draft_id')
             scheduled_date = bill_data.get('scheduled_date')
+            # Genuine advance booking flag. Trust explicit flag; also treat any
+            # date differing from today (IST) as scheduled (belt-and-suspenders).
+            is_scheduled = 1 if bill_data.get('is_scheduled') else 0
+            if scheduled_date and scheduled_date != now_ist().date().isoformat():
+                is_scheduled = 1
             total_amount = bill_data['total']
             
             # If batch has explicit pay later flag, use it? Or individual?
@@ -628,9 +638,9 @@ def checkout():
                         # Optimistically try to set the new bill_no
                         db.execute(
                             '''UPDATE bills SET 
-                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, status='printed', type=?, created_at=?, original_bill_id=?, remarks=?, payment_status=?, phone=?, payment_date=?
-                               WHERE id=?''', 
-                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, ist_timestamp, original_bill_id, remarks, payment_status, phone, payment_date, draft_id)
+                               bill_no=?, bill_seq=?, printer_id=?, total_amount=?, devotee_name=?, star=?, scheduled_date=?, is_scheduled=?, status='printed', type=?, created_at=?, original_bill_id=?, remarks=?, payment_status=?, phone=?, payment_date=?
+                               WHERE id=?''',
+                            (bill_no, new_seq, c_session['printer_id'], total_amount, name, star, scheduled_date, is_scheduled, b_type, ist_timestamp, original_bill_id, remarks, payment_status, phone, payment_date, draft_id)
                         )
                         bill_id = draft_id
                         
@@ -644,9 +654,9 @@ def checkout():
                         # Create NEW Bill
                         # We include bill_no here to trigger UNIQUE constraint immediately
                         cur = db.execute(
-                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, type, status, created_at, original_bill_id, remarks, payment_status, phone, payment_date)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, b_type, status, ist_timestamp, original_bill_id, remarks, payment_status, phone, payment_date)
+                            '''INSERT INTO bills (bill_no, bill_seq, cashier_id, printer_id, total_amount, devotee_name, star, scheduled_date, is_scheduled, type, status, created_at, original_bill_id, remarks, payment_status, phone, payment_date)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_no, new_seq, g.user['id'], c_session['printer_id'], total_amount, name, star, scheduled_date, is_scheduled, b_type, status, ist_timestamp, original_bill_id, remarks, payment_status, phone, payment_date)
                         )
                         bill_id = cur.lastrowid
                     

@@ -458,6 +458,10 @@ def init_db():
     if 'payment_date' not in columns:
         c.execute("ALTER TABLE bills ADD COLUMN payment_date TIMESTAMP")
 
+    # Migration: Add is_scheduled flag (marks a genuine advance booking vs same-day walk-in)
+    if 'is_scheduled' not in columns:
+        c.execute("ALTER TABLE bills ADD COLUMN is_scheduled INTEGER DEFAULT 0")
+
     # 7. Cashier Sessions (for tracking printer assignment)
     c.execute('''
         CREATE TABLE IF NOT EXISTS cashier_sessions (

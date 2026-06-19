@@ -24,6 +24,58 @@ def _safe_extract(zip_path, dest):
                 raise ValueError(f"Unsafe path in update package: {member}")
         zf.extractall(dest)
 
+
+def _single_root_folder(zip_path):
+    """Return the name if every entry sits under one top folder, else None.
+
+    GitHub zipballs wrap everything in 'repo-<sha>/'; flat zips have no wrapper.
+    """
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        names = [n for n in zf.namelist() if n.strip('/')]
+        if not names:
+            return None
+        roots = {n.split('/')[0] for n in names}
+        if len(roots) != 1:
+            return None
+        root = roots.pop()
+        # Confirm it is actually a directory wrapper, not a single top-level file
+        if any(n == root or n == root + '/' for n in names) or all(n.startswith(root + '/') for n in names):
+            return root
+    return None
+
+
+def _install_package(zip_path, dest):
+    """Safely extract an update package into dest, flattening a single wrapper folder.
+
+    Handles GitHub zipballs (nested 'repo-<sha>/...') and folder-wrapped zips by
+    merging the wrapper's contents over dest. Flat zips extract directly.
+    """
+    dest = os.path.realpath(dest)
+    root = _single_root_folder(zip_path)
+
+    if root is None:
+        # Flat package: extract straight into dest
+        _safe_extract(zip_path, dest)
+        return
+
+    # Wrapped package: extract to temp, then merge wrapper contents into dest
+    staging = os.path.join(dest, "_update_staging")
+    if os.path.exists(staging):
+        shutil.rmtree(staging)
+    os.makedirs(staging)
+    try:
+        _safe_extract(zip_path, staging)
+        source_dir = os.path.join(staging, root)
+        for item in os.listdir(source_dir):
+            s = os.path.join(source_dir, item)
+            d = os.path.join(dest, item)
+            if os.path.isdir(s):
+                shutil.copytree(s, d, dirs_exist_ok=True)
+            else:
+                shutil.copy2(s, d)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_URL = "https://github.com/theagg-18/devalaya-pro"
@@ -198,6 +250,7 @@ def start_production_server():
     time.sleep(2)
 
 def stop_server(proc):
+    import psutil
     print("Stopping server...")
     proc.terminate()
     try:
@@ -229,7 +282,7 @@ def update_system(silent=False):
         if choice == 'y':
             print("Extracting update...")
             try:
-                _safe_extract(update_zip_path, BASE_DIR)
+                _install_package(update_zip_path, BASE_DIR)
                 print("[+] Files extracted successfully.")
                 
                 # Backup/Rename the zip file so it doesn't prompt again
@@ -320,39 +373,9 @@ def update_system(silent=False):
                     shutil.copyfileobj(dl_resp, f)
 
                 print("Extracting update...")
-                with zipfile.ZipFile(temp_zip, 'r') as zf:
-                    _safe_extract(temp_zip, BASE_DIR)
-                    root_folder = zf.namelist()[0].split('/')[0]
-
-                    temp_extract_dir = os.path.join(BASE_DIR, "temp_extract")
-                    if os.path.exists(temp_extract_dir):
-                        shutil.rmtree(temp_extract_dir)
-                    os.makedirs(temp_extract_dir)
-
-                    zf.extractall(temp_extract_dir)
-
-                    source_dir = os.path.join(temp_extract_dir, root_folder)
-                    for item in os.listdir(source_dir):
-                        s = os.path.join(source_dir, item)
-                        d = os.path.join(BASE_DIR, item)
-                        if os.path.exists(d):
-                            if os.path.isdir(d):
-                                if sys.version_info >= (3, 8):
-                                    shutil.copytree(s, d, dirs_exist_ok=True)
-                                else:
-                                    shutil.rmtree(d)
-                                    shutil.copytree(s, d)
-                            else:
-                                os.remove(d)
-                                shutil.copy2(s, d)
-                        else:
-                            if os.path.isdir(s):
-                                shutil.copytree(s, d)
-                            else:
-                                shutil.copy2(s, d)
+                _install_package(temp_zip, BASE_DIR)
 
                 os.remove(temp_zip)
-                shutil.rmtree(temp_extract_dir)
                 print("[+] Update installed successfully.")
                     
         except Exception as e:
