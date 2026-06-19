@@ -246,11 +246,16 @@ def mark_paid(bill_id):
 @login_required
 def update_bill_status():
     data = request.json
-    bill_no = data.get('bill_no')
     status = data.get('status')
     phone = data.get('phone')
 
-    if not bill_no or not status:
+    # Accept a single bill_no or a list (bill_nos) for batch payment recording
+    bill_nos = data.get('bill_nos')
+    if not bill_nos:
+        single = data.get('bill_no')
+        bill_nos = [single] if single else []
+
+    if not bill_nos or not status:
         return {'status': 'error', 'message': 'Missing parameters'}
 
     if status not in ('paid', 'pending'):
@@ -259,14 +264,16 @@ def update_bill_status():
     db = get_db()
 
     if status == 'pending':
-        db.execute("UPDATE bills SET payment_status = ?, phone = ? WHERE bill_no = ?",
-                   (status, phone, bill_no))
+        for bn in bill_nos:
+            db.execute("UPDATE bills SET payment_status = ?, phone = ? WHERE bill_no = ?",
+                       (status, phone, bn))
     else:
         pay_date = get_ist_timestamp()
-        db.execute(
-            "UPDATE bills SET payment_status = ?, payment_received_by = ?, payment_date = ? WHERE bill_no = ?",
-            (status, g.user['id'], pay_date, bill_no)
-        )
+        for bn in bill_nos:
+            db.execute(
+                "UPDATE bills SET payment_status = ?, payment_received_by = ?, payment_date = ? WHERE bill_no = ?",
+                (status, g.user['id'], pay_date, bn)
+            )
 
     db.commit()
     return {'status': 'success'}
@@ -308,8 +315,8 @@ def start_billing():
         session['cart'] = cart
         session.modified = True
     
-    return render_template('cashier/billing.html', mode='unified', stars=STARS, star_map=star_map, items=items, 
-                           cart=cart, 
+    return render_template('cashier/billing.html', mode='unified', stars=STARS, star_map=star_map, items=items,
+                           cart=cart,
                            batch=session.get('batch', []))
 
 @cashier_bp.route('/billing/cart/update', methods=['POST'])
@@ -449,8 +456,18 @@ def add_to_batch():
     data = request.json or {}
     replication_dates = data.get('dates', []) # List of "YYYY-MM-DD" strings
 
+    # Merge explicit details so the entry never loses name/star/date (onblur race fix)
+    if 'name' in data:
+        cart['devotee_name'] = html.escape(data.get('name', ''))
+    if 'star' in data:
+        cart['star'] = html.escape(data.get('star', ''))
+    if data.get('scheduled_date'):
+        cart['scheduled_date'] = html.escape(data.get('scheduled_date', ''))
+    session['cart'] = cart
+    session.modified = True
+
     batch = session.get('batch', [])
-    
+
     if replication_dates:
         # Replicate Mode
         import copy
@@ -480,21 +497,23 @@ def add_to_batch():
 def recall_batch_entry():
     idx = request.json.get('index')
     batch = session.get('batch', [])
-    
+
     if idx is None or idx < 0 or idx >= len(batch):
         return {'status': 'error', 'message': 'Invalid batch index'}
-        
-    # Check if current cart is empty to avoid overwriting
+
+    # Pop the requested entry FIRST (idx refers to the current batch).
+    entry = batch.pop(idx)
+
+    # If a cart is already loaded (e.g. mid-edit of another entry), stash it
+    # back into the batch instead of blocking — lets the user switch freely.
     current_cart = session.get('cart')
     if current_cart and current_cart.get('items'):
-        return {'status': 'error', 'message': 'An error occurred during checkout.'}
-        
-    # Pop from batch and set as cart
-    entry = batch.pop(idx)
+        batch.append(current_cart)
+
     session['batch'] = batch
     session['cart'] = entry
     session.modified = True
-    
+
     return {'status': 'success'}
 
 @cashier_bp.route('/billing/batch/remove-entry', methods=['POST'])
@@ -923,9 +942,10 @@ def checkout():
                 
             total_amount_collected = sum(b['total'] for b in items_to_process)
             return {
-                'status': 'print_web', 
+                'status': 'print_web',
                 'content': html_content,
                 'bill_no': bill_ids[0] if bill_ids else None,
+                'bill_nos': bill_ids,
                 'total_amount': total_amount_collected
             }
 
@@ -945,7 +965,7 @@ def checkout():
             session.pop('cart', None)
         
         total_amount_collected = sum(b['total'] for b in items_to_process)
-        return {'status': 'success', 'bill_no': bill_ids[0] if bill_ids else None, 'total_amount': total_amount_collected}
+        return {'status': 'success', 'bill_no': bill_ids[0] if bill_ids else None, 'bill_nos': bill_ids, 'total_amount': total_amount_collected}
         
     except Exception as e:
         import logging

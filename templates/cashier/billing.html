@@ -2,66 +2,92 @@
 
 {% block content %}
 <div class="billing-container"
-    style="display: grid; grid-template-columns: 1fr 450px; gap: 2rem; height: calc(100vh - 90px);">
+    style="display: grid; grid-template-columns: 1fr 460px; gap: 1.5rem; height: calc(100vh - 90px);">
 
     <!-- Left Panel: Item Selection -->
-    <div class="card" style="display: flex; flex-direction: column; overflow: hidden; padding: 0;">
-        <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+    <div class="pos-panel">
+        <div class="pos-panel-head">
             <div
                 style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <h3 style="margin: 0; white-space: nowrap;">Select Item (തിരഞ്ഞെടുക്കുക)</h3>
+                <div>
+                    <div class="pos-eyebrow">Catalogue</div>
+                    <h3 class="pos-title">Select Item <span class="mal">തിരഞ്ഞെടുക്കുക</span></h3>
+                </div>
                 <div
-                    style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                    style="display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
                     <div class="filter-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="btn-filter active" onclick="filterCategory('all')">All</button>
                         <button class="btn-filter" onclick="filterCategory('puja')">Vazhipadu</button>
                         <button class="btn-filter" onclick="filterCategory('item')">Donation</button>
                     </div>
-                    <input type="text" id="searchBox" placeholder="Search (തിരയുക)..."
-                        style="width: 100%; max-width: 200px; padding: 6px 12px; font-size: 0.9rem; min-width: 150px;"
-                        onkeyup="filterItems()">
+                    <div class="pos-search">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="searchBox" placeholder="Search (തിരയുക)..." onkeyup="filterItems()">
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="item-grid"
-            style="padding: 1rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; align-content: start;">
+            style="padding: 1rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .85rem; align-content: start;">
             {% for item in items %}
             <button onclick="handleAddToCart(this)" class="item-btn" data-search="{{ item.name|lower }}"
                 data-type="{{ item.type }}" data-id="{{ item.id }}" data-name="{{ item.name }}"
                 data-amount="{{ item.amount }}">
+                <span class="item-tag"></span>
                 <div class="item-name">{{ item.name }}</div>
-                <div class="item-price">₹{{ "%.0f"|format(item.amount) }}</div>
+                <div class="item-foot">
+                    <span class="item-price">₹{{ "%.0f"|format(item.amount) }}</span>
+                    <span class="item-add" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </span>
+                </div>
             </button>
             {% endfor %}
         </div>
     </div>
 
     <!-- Right Panel: Cart & Details -->
-    <div class="card"
-        style="display: flex; flex-direction: column; padding: 0; border: 2px solid var(--primary); position: relative; height: 100%; overflow: hidden;">
+    <div class="pos-panel pos-panel--cart"
+        style="position: relative; height: 100%;">
 
         <!-- Batch Indicator -->
         <div id="batchIndicator"
-            style="background: #1e293b; color: white; padding: 8px 16px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; gap: 8px; align-items: center;">
+            style="background: #1f2430; color: #eef1f6; padding: 8px 16px; font-size: 0.86rem; display: flex; justify-content: space-between; align-items: center; gap: .75rem; position: sticky; top: 0; z-index: 6;">
+            <div style="display: flex; gap: 10px; align-items: center;">
                 {% set ns = namespace(total=0) %}
                 {% for b in batch %}
                 {% set ns.total = ns.total + b['total'] %}
                 {% endfor %}
-                <span>Batch: <strong id="batchCount">{{ batch|length }}</strong> bills <span
-                        style="color: #94a3b8;">|</span> <strong>₹{{ "%.0f"|format(ns.total) }}</strong></span>
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <span style="opacity: .8;">Batch</span>
+                    <strong id="batchCount" style="color: var(--accent);">{{ batch|length }}</strong>
+                    <span style="opacity: .35;">|</span>
+                    <strong>₹{{ "%.0f"|format(ns.total) }}</strong>
+                </span>
                 {% if batch|length > 0 %}
                 <button onclick="showBatchModal()" title="View/Edit Batch"
-                    style="background: #3b82f6; border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px;">
-                    👁️
+                    style="background: rgba(255,255,255,.12); border: none; color: #fff; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
                 </button>
                 {% endif %}
             </div>
 
             {% if batch|length > 0 %}
             <button onclick="showPrintDialog()"
-                style="background: #22c55e; border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">PRINT
+                style="background: #fff; border: none; color: #1f2430; padding: 7px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .82rem; letter-spacing: .02em;">PRINT
                 ALL</button>
             {% endif %}
         </div>
@@ -83,89 +109,76 @@
         </div>
 
         <!-- Devotee Details Form -->
-        <div style="padding: 0.75rem; background: #eff6ff; border-bottom: 1px solid #e2e8f0;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <div style="padding: 0.6rem 1rem; background: var(--pos-soft); border-bottom: 1px solid var(--pos-line);">
+            <div class="devotee-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.55rem;">
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="devName" style="font-size: 0.85rem;">ഭക്തന്റെ പേര്</label>
+                    <label for="devName" style="font-size: 0.8rem;">ഭക്തന്റെ പേര് <span style="color: var(--text-muted); font-weight: 400;">/ Name</span></label>
                     <input type="text" id="devName" value="{{ cart.devotee_name }}" onblur="updateDetails()"
-                        placeholder="Name" style="font-size: 0.9rem;">
+                        placeholder="Devotee name" autocomplete="off" style="font-size: 0.92rem;">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="devStar" style="font-size: 0.85rem;">Star (നാൾ)</label>
+                    <label for="devStar" style="font-size: 0.8rem;">Star <span style="color: var(--text-muted); font-weight: 400;">/ നാൾ</span></label>
                     <div class="autocomplete-container">
                         <input type="text" id="devStar" value="{{ cart.star }}" onblur="setTimeout(updateDetails, 200)"
                             onfocus="showStars()" oninput="filterStars()" placeholder="Star" autocomplete="off"
-                            style="font-size: 0.9rem;">
+                            style="font-size: 0.92rem;">
                         <div id="starResults" class="autocomplete-results"></div>
                     </div>
                 </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
-                <label for="scheduledDate" style="font-size: 0.85rem;">Vazhipadu Date</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
+                <label for="scheduledDate" style="font-size: 0.8rem;">Vazhipadu Date</label>
+                <div class="vazhipadu-date-row" style="display: flex; gap: 8px; align-items: center;">
                     <input type="date" id="scheduledDate" value="{{ cart.scheduled_date }}"
                         onchange="updateDetails(); fetchStarForDate()"
-                        style="font-size: 0.9rem; padding: 6px; flex: 1;">
-
-                    <div id="dateStarBadge" title="Star of this day"
-                        style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; flex: 0 0 auto; display: none;">
-                    </div>
+                        style="font-size: 0.92rem; flex: 1; min-width: 0;">
 
                     <button type="button" onclick="openStarFinder()" title="Find Next Star Date"
-                        style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1rem;">
-                        📅
+                        style="flex: 0 0 auto; background: var(--surface); border: 1px solid var(--pos-line-strong); color: var(--primary); padding: 9px 11px; border-radius: 10px; cursor: pointer; display: flex; align-items: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
                     </button>
                 </div>
+
+                <!-- Star of the selected date (defaults to today). Tap to apply. -->
+                <div id="dateStarBadge" class="pos-starline" onclick="autoSelectStar()"
+                    title="Tap to set as the devotee's star" style="display: none;"></div>
             </div>
         </div>
 
         <!-- Cart Items -->
         <div id="cartItems"
-            style="flex: 1; overflow-y: auto; padding: 1rem; min-height: 0; display: flex; flex-direction: column;">
+            style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.85rem 1rem; display: flex; flex-direction: column;">
             <!-- Rendered via JS -->
             {% for item in cart['items'] %}
             <div class="cart-item">
                 <div class="cart-item-info">
-                    <div class="cart-item-title">{{ item.name }}</div>
-                    <div class="cart-item-details">
-                        <div class="qty-control">
-                            <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', -1)"
-                                class="btn-qty minus" title="Decrease">
-                                −
-                            </button>
-                            <span class="qty-display">{{ item.count }}</span>
-                            <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', 1)"
-                                class="btn-qty plus" title="Increase">
-                                +
-                            </button>
-                        </div>
-                    </div>
+                    <span class="cart-item-title">{{ item.name }}</span>
+                    <span class="cart-item-price">₹{{ "%.0f"|format(item.total) }}{% if item.count > 1 %} <span class="cart-unit">· ₹{{ "%.0f"|format(item.amount) }} ea</span>{% endif %}</span>
                 </div>
-                <div class="cart-item-actions">
-                    <div class="cart-item-price">₹{{ "%.0f"|format(item.total) }}</div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">(₹{{ "%.0f"|format(item.amount) }}
-                        ea)</div>
-                    <button onclick="handleRemoveFromCart(this)" data-id="{{ item.id }}" class="btn-remove"
-                        title="Remove" style="margin-top: 4px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
-                            </path>
-                        </svg>
-                    </button>
+                <div class="qty-control">
+                    <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', -1)"
+                        class="btn-qty minus" title="Decrease / Remove">−</button>
+                    <span class="qty-display">{{ item.count }}</span>
+                    <button onclick="changeQuantity('{{ item.id }}', '{{ item.count }}', 1)"
+                        class="btn-qty plus" title="Increase">+</button>
                 </div>
             </div>
             {% endfor %}
         </div>
 
         <!-- Totals & Actions -->
-        <div class="billing-totals-section" style="padding: 1rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+        <div class="billing-totals-section" style="padding: 0.7rem 1.1rem 0.85rem; background: var(--surface); border-top: 1px solid var(--pos-line-strong); position: sticky; bottom: 0; z-index: 6; box-shadow: 0 -6px 16px -8px rgba(16,24,40,.18);">
             <div
-                style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.25rem; font-weight: 700;">
-                <span>Total (ആകെ)</span>
-                <span id="cartTotal">₹{{ "%.0f"|format(cart.total|default(0)) }}</span>
+                style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem;">
+                <span style="font-size: 1rem; font-weight: 600; color: var(--text-muted);">Total <span style="font-weight: 400;">(ആകെ)</span></span>
+                <span id="cartTotal" style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">₹{{ "%.0f"|format(cart.total|default(0)) }}</span>
             </div>
 
             {% if cart.is_edit_mode %}
@@ -194,30 +207,30 @@
         </div>
         {% endif %}
 
-        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <button onclick="clearCart()" class="btn btn-secondary"
-                    style="border-color: #ef4444; color: #ef4444; flex: 1;">Clear</button>
-                <button onclick="saveDraft()" class="btn btn-secondary" title="Save as Draft"
-                    style="border-color: #f59e0b; color: #f59e0b; flex: 1;">Save Draft</button>
+        <div class="pos-actions" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div class="action-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem;">
+                <button onclick="clearCart()" class="btn btn-ghost" title="Clear cart">Clear</button>
+                <button onclick="saveDraft()" class="btn btn-ghost" title="Save as Draft">Draft</button>
+                <button onclick="addToBatch()" class="btn btn-batch">Batch</button>
+                <button onclick="showReplicateModal()" class="btn btn-ghost" title="Replicate to Multiple Dates"
+                    style="padding-left: 12px; padding-right: 12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <line x1="12" y1="14" x2="12" y2="18"></line>
+                        <line x1="10" y1="16" x2="14" y2="16"></line>
+                    </svg>
+                </button>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div style="display: flex; gap: 0.5rem;">
-                    <button onclick="addToBatch()" class="btn btn-secondary"
-                        style="border-color: var(--primary); color: var(--primary); flex: 1;">Save to
-                        Batch</button>
-                    <button onclick="showReplicateModal()" class="btn btn-secondary" title="Replicate to Multiple Dates"
-                        style="border-color: #7e22ce; color: #7e22ce; flex: 0 0 auto;">📅+</button>
-                </div>
-                {% if cart.is_edit_mode %}
-                <button onclick="processUnifiedPrint()" class="btn btn-primary"
-                    style="background: #ea580c; border-color: #ea580c; flex: 1;">Update & Print</button>
-                {% else %}
-                <button onclick="processUnifiedPrint()" class="btn btn-primary"
-                    style="background: #22c55e; border-color: #22c55e; flex: 1;">Print Receipt</button>
-                {% endif %}
-            </div>
+            {% if cart.is_edit_mode %}
+            <button onclick="processUnifiedPrint()" class="btn btn-primary btn-cta">Update &amp; Print</button>
+            {% else %}
+            <button onclick="processUnifiedPrint()" class="btn btn-primary btn-cta">Print Receipt</button>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -259,9 +272,21 @@
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <div style="font-weight: 600;">₹{{ "%.0f"|format(bill.total) }}</div>
                     <button onclick="handleRecallBatchItem(this)" data-index="{{ loop.index0 }}" title="Edit"
-                        style="color: #3b82f6; background: #eff6ff; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">✏️</button>
+                        style="color: var(--primary); background: var(--pos-soft); border: 1px solid var(--pos-line-strong); padding: 6px; border-radius: 7px; cursor: pointer; display: flex;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
                     <button onclick="handleDeleteBatchItem(this)" data-index="{{ loop.index0 }}" title="Remove"
-                        style="color: #ef4444; background: #fef2f2; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🗑️</button>
+                        style="color: #b42318; background: #fdecea; border: 1px solid #f3d6d2; padding: 6px; border-radius: 7px; cursor: pointer; display: flex;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
             {% else %}
@@ -316,26 +341,110 @@
 </div>
 
 <style>
-    .item-btn {
-        background: white;
-        border: 1px solid #e2e8f0;
-        padding: 1rem;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.1s;
-        text-align: center;
+    /* ===== POS Modern Theme (brand color is theme-variable) ===== */
+    .billing-container {
+        --pos-line: #edeff2;
+        --pos-line-strong: #e2e5ea;
+        --pos-ink: var(--text-main);
+        --pos-soft: #f6f7f9;
+        --pos-danger: #dc2626;
+        --pos-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+    }
+
+    /* Panels */
+    .pos-panel {
+        background: var(--surface);
+        border: 1px solid var(--pos-line);
+        border-radius: 14px;
+        box-shadow: var(--pos-shadow);
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        height: 100px;
+        overflow: hidden;
+        padding: 0;
+    }
+
+    /* Cart panel: fixed height; only the item list scrolls (totals stay put) */
+    .pos-panel--cart {
+        overflow: hidden;
+    }
+
+    .pos-panel-head {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--pos-line);
+        background: var(--pos-soft);
+    }
+
+    .pos-eyebrow {
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    .pos-title {
+        margin: 2px 0 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--pos-ink);
+        white-space: nowrap;
+    }
+
+    .pos-title .mal {
+        font-weight: 500;
+        color: var(--text-muted);
+        font-size: .9rem;
+    }
+
+    /* Search */
+    .pos-search {
+        position: relative;
+        flex: 1;
+        min-width: 160px;
+        max-width: 280px;
+    }
+
+    .pos-search svg {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+
+    .pos-search input {
+        width: 100%;
+        padding: 9px 12px 9px 36px;
+        font-size: .9rem;
+        border: 1px solid var(--pos-line-strong);
+        border-radius: 9px;
+        background: var(--surface);
+    }
+
+    /* Item cards — modern POS tile */
+    .item-btn {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--pos-line);
+        padding: 14px;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: stretch;
+        gap: 10px;
+        min-height: 116px;
+        overflow: hidden;
     }
 
     .item-btn:hover {
-        border-color: var(--primary);
-        background: #eff6ff;
+        border-color: var(--pos-line-strong);
         transform: translateY(-2px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: var(--pos-shadow);
     }
 
     .item-btn:active {
@@ -344,144 +453,295 @@
 
     .item-name {
         font-weight: 600;
-        font-size: 0.95rem;
-        margin-bottom: 4px;
-        color: var(--text-main);
+        font-size: .92rem;
+        line-height: 1.3;
+        color: var(--pos-ink);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .item-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
     }
 
     .item-price {
-        font-size: 0.9rem;
-        color: var(--text-muted);
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--pos-ink);
     }
 
-    .cart-item {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 8px;
+    .item-add {
+        flex: 0 0 auto;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        transition: box-shadow 0.2s;
+        justify-content: center;
+        transition: transform .12s, filter .12s;
+    }
+
+    .item-btn:hover .item-add {
+        transform: scale(1.08);
+        filter: brightness(1.05);
+    }
+
+    /* Category accent dot (puja vs donation) */
+    .item-tag {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+    }
+
+    .item-btn[data-type="puja"] .item-tag {
+        background: var(--primary);
+    }
+
+    /* Cart rows — compact single line: info left, stepper right */
+    .cart-item {
+        background: var(--surface);
+        border: 1px solid var(--pos-line);
+        border-radius: 11px;
+        padding: 8px 14px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        transition: border-color .15s, box-shadow .15s;
     }
 
     .cart-item:hover {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        border-color: #cbd5e1;
+        box-shadow: 0 3px 8px rgba(16, 24, 40, .06);
+        border-color: var(--pos-line-strong);
     }
 
     .cart-item-info {
-        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
     }
 
     .cart-item-title {
         font-weight: 600;
-        color: var(--text-main);
-        font-size: 0.95rem;
-    }
-
-    .cart-item-details {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        margin-top: 2px;
-    }
-
-    .cart-item-actions {
-        text-align: right;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 4px;
+        color: var(--pos-ink);
+        font-size: .95rem;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .cart-item-price {
         font-weight: 700;
+        font-size: .95rem;
+        color: var(--pos-ink);
+    }
+
+    .cart-unit {
+        font-size: .74rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    /* Stepper sits inline, no top margin in compact row */
+    .cart-item .qty-control {
+        margin-top: 0;
+        flex: 0 0 auto;
+    }
+
+    /* Compact form inputs inside the cart panel (reclaim vertical space) */
+    .pos-panel--cart .form-group label {
+        margin-bottom: 2px;
+    }
+
+    .pos-panel--cart input[type="text"],
+    .pos-panel--cart input[type="date"],
+    .pos-panel--cart select {
+        padding: 7px 11px;
+    }
+
+    /* Star-of-date line */
+    .pos-starline {
+        margin-top: 6px;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 11px;
+        border-radius: 9px;
+        background: rgba(var(--accent-rgb), .12);
+        border: 1px solid rgba(var(--accent-rgb), .35);
         color: var(--text-main);
+        font-size: .82rem;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .pos-starline:hover {
+        background: rgba(var(--accent-rgb), .2);
+    }
+
+    /* Save-to-Batch (outlined brand) + primary CTA */
+    .btn-batch {
+        background: rgba(var(--primary-rgb), .06);
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .btn-batch:hover {
+        background: rgba(var(--primary-rgb), .12);
+    }
+
+    .btn-cta {
+        width: 100%;
+        padding: 11px 16px;
+        font-size: 0.98rem;
+        font-weight: 700;
+        border-radius: 11px;
+    }
+
+    .pos-actions .btn {
+        padding: 9px 12px;
     }
 
     .btn-remove {
-        background: #fee2e2;
-        color: #ef4444;
-        border: none;
+        background: transparent;
+        color: var(--pos-danger);
+        border: 1px solid var(--pos-line-strong);
         width: 28px;
         height: 28px;
-        border-radius: 6px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all .15s;
     }
 
     .btn-remove:hover {
-        background: #fecaca;
+        background: rgba(220, 38, 38, .08);
+        border-color: rgba(220, 38, 38, .35);
     }
 
     /* Qty Controls */
     .qty-control {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         margin-top: 4px;
-        background: #f1f5f9;
-        padding: 2px;
-        border-radius: 6px;
+        background: var(--pos-soft);
+        border: 1px solid var(--pos-line);
+        padding: 3px;
+        border-radius: 9px;
         width: fit-content;
     }
 
     .btn-qty {
-        background: white;
-        border: 1px solid #cbd5e1;
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
+        background: var(--surface);
+        border: 1px solid var(--pos-line-strong);
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         padding: 0;
-        font-weight: 600;
-        color: var(--text-main);
-        transition: all 0.1s;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--pos-ink);
+        transition: all .12s;
     }
 
     .btn-qty:hover {
-        background: white;
         border-color: var(--primary);
         color: var(--primary);
     }
 
-    .btn-qty.minus {
-        color: #ef4444;
+    .btn-qty.minus:hover {
+        color: var(--pos-danger);
+        border-color: rgba(220, 38, 38, .35);
     }
 
-    .btn-qty.plus {
-        color: #22c55e;
+    .btn-qty.plus:hover {
+        color: var(--success);
+        border-color: rgba(46, 125, 50, .35);
     }
 
     .qty-display {
-        font-weight: 600;
-        font-size: 0.9rem;
-        min-width: 20px;
+        font-weight: 700;
+        font-size: .95rem;
+        min-width: 24px;
         text-align: center;
-        color: var(--text-main);
+        color: var(--pos-ink);
     }
 
-    /* Filter Controls */
+    /* Filter pills */
     .btn-filter {
-        background: white;
-        border: 1px solid #cbd5e1;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 0.8rem;
+        background: var(--surface);
+        border: 1px solid var(--pos-line-strong);
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: .82rem;
+        font-weight: 600;
+        color: var(--text-muted);
         cursor: pointer;
+        transition: all .12s;
+    }
+
+    .btn-filter:hover {
+        border-color: var(--primary);
+        color: var(--primary);
     }
 
     .btn-filter.active {
         background: var(--primary);
-        color: white;
+        color: #fff;
         border-color: var(--primary);
+    }
+
+    /* Section labels & action buttons */
+    .pos-section {
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+
+    .pos-actions .btn {
+        width: 100%;
+        font-size: .92rem;
+        padding: 11px 12px;
+    }
+
+    .btn-ghost {
+        background: var(--surface);
+        border: 1px solid var(--pos-line-strong);
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .btn-ghost:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    /* Tablet: shrink fixed sidebar so item area isn't cramped */
+    @media (max-width: 1024px) and (min-width: 769px) {
+        .billing-container {
+            grid-template-columns: 1fr 360px !important;
+            gap: 1rem !important;
+        }
     }
 
     /* Mobile Sticky Footer */
@@ -489,11 +749,53 @@
         .billing-totals-section {
             position: sticky;
             bottom: 0;
-            background: white;
-            border-top: 2px solid #e2e8f0;
+            background: var(--surface);
+            border-top: 1px solid var(--pos-line-strong);
             z-index: 50;
             padding: 1rem !important;
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -4px 12px -2px rgba(16, 24, 40, .08);
+        }
+
+        /* Panels: auto height, full width on mobile */
+        .billing-container > .pos-panel {
+            height: auto !important;
+            max-height: none !important;
+            margin-bottom: 0;
+        }
+
+        /* Cart list: tall, scrolls internally so buttons stay reachable */
+        .billing-container #cartItems {
+            min-height: 200px !important;
+            max-height: 55vh !important;
+            overflow-y: auto !important;
+            padding: 0.75rem !important;
+        }
+    }
+
+    /* Small phones: stack paired inputs, tighter item grid */
+    @media (max-width: 480px) {
+        .devotee-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        /* Keep utility actions 2x2 (not a tall single column) */
+        .action-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+        .item-grid {
+            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)) !important;
+            gap: 0.5rem !important;
+        }
+
+        #batchIndicator {
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        /* Payment / print overlays: keep action buttons stacked & reachable */
+        #paymentOverlay #actionButtons {
+            flex-direction: column;
         }
     }
 </style>
@@ -700,6 +1002,14 @@
         const name = document.getElementById('devName').value;
         const star = document.getElementById('devStar').value;
         const scheduled_date = document.getElementById('scheduledDate').value;
+
+        // Keep client cart in sync so drafts/batch read fresh values
+        if (CURRENT_CART) {
+            CURRENT_CART.devotee_name = name;
+            CURRENT_CART.star = star;
+            CURRENT_CART.scheduled_date = scheduled_date;
+        }
+
         await api('/cashier/billing/cart/update', {
             action: 'set_details', name, star, scheduled_date
         });
@@ -730,6 +1040,9 @@
     }
 
     async function addToBatch() {
+        // Persist latest name/star/date before reading server cart (avoids onblur race)
+        await updateDetails();
+
         // Validation
         if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
             alert("Cart is empty.");
@@ -745,7 +1058,12 @@
         const btn = document.querySelector('button[onclick="addToBatch()"]');
         btn.disabled = true;
 
-        const res = await api('/cashier/billing/batch/add', {});
+        // Send details explicitly so the batch entry never loses name/star/date
+        const res = await api('/cashier/billing/batch/add', {
+            name: document.getElementById('devName').value,
+            star: document.getElementById('devStar').value,
+            scheduled_date: document.getElementById('scheduledDate').value
+        });
         if (res.status === 'success') {
             document.getElementById('batchCount').innerText = res.batch_count;
 
@@ -788,6 +1106,9 @@
     }
 
     async function processUnifiedPrint() {
+        // Persist latest name/star/date before checkout (avoids onblur race)
+        await updateDetails();
+
         if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
             alert("Cart is empty.");
             return;
@@ -878,36 +1199,20 @@
                 // Store content for reprint
                 lastPrintContent = res.content;
 
+                // PERSISTENT LOCK: Save to localStorage (batch = list of bill nos)
+                localStorage.setItem(PENDING_BILL_KEY, JSON.stringify({
+                    billNo: res.bill_no,
+                    billNos: res.bill_nos || (res.bill_no ? [res.bill_no] : []),
+                    totalAmount: res.total_amount,
+                    content: res.content,
+                    timestamp: Date.now()
+                }));
+
                 // Use Iframe to bypass popup blockers
                 printContentInIframe(res.content);
 
-                // Show confirmation overlay instead of auto-reloading
-                const overlay = document.createElement('div');
-                overlay.style.position = 'fixed';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.height = '100%';
-                overlay.style.background = 'rgba(0,0,0,0.8)';
-                overlay.style.zIndex = '2000'; // Above everything
-                overlay.style.display = 'flex';
-                overlay.style.flexDirection = 'column';
-                overlay.style.justifyContent = 'center';
-                overlay.style.alignItems = 'center';
-                overlay.style.color = 'white';
-                overlay.innerHTML = `
-                    <h2 style="margin-bottom: 1rem; color: white;">Printing...</h2>
-                    <p style="margin-bottom: 2rem; color: white;">Please finish printing in the system dialog.</p>
-                    <div style="display: flex; gap: 1rem;">
-                        <button onclick="reprintLast()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Reprint
-                        </button>
-                        <button onclick="location.reload()" style="padding: 1rem 2rem; font-size: 1.2rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Done / Start New Bill
-                        </button>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
+                // Show payment overlay so batch bills get recorded as Paid / Pay Later
+                showPaymentOverlay(res.bill_no, res.total_amount, res.bill_nos);
             } else {
                 alert("Error: " + res.message);
             }
@@ -921,8 +1226,15 @@
     }
 
     const PENDING_BILL_KEY = 'devalaya_pending_bill';
+    let CURRENT_BILL_NOS = []; // Bills awaiting payment confirmation (single or batch)
 
-    function showPaymentOverlay(billNo, totalAmount) {
+    function showPaymentOverlay(billNo, totalAmount, billNos) {
+        // Track all bills this overlay covers (batch may have many)
+        CURRENT_BILL_NOS = (billNos && billNos.length) ? billNos : (billNo ? [billNo] : []);
+        const billLabel = CURRENT_BILL_NOS.length > 1
+            ? `${CURRENT_BILL_NOS.length} bills`
+            : (billNo || (CURRENT_BILL_NOS[0] || ''));
+
         // Remove existing if any
         const existing = document.getElementById('paymentOverlay');
         if (existing) existing.remove();
@@ -948,16 +1260,18 @@
             <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 <h2 style="margin-bottom: 0.5rem; color: #1e293b;">Payment Confirmation</h2>
                 <h3 style="margin: 0 0 1rem 0; color: #d97706; font-size: 2rem; font-weight: 800;">Collect: ₹${parseFloat(totalAmount).toFixed(0)}</h3>
-                <p style="margin-bottom: 2rem; color: #64748b;">Bill No: <strong>${billNo}</strong><br>Please confirm payment status to proceed.</p>
-                
+                <p style="margin-bottom: 2rem; color: #64748b;">Bill No: <strong>${billLabel}</strong><br>Please confirm payment status to proceed.</p>
+
                 <div id="actionButtons" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <button onclick="markPaid('${billNo}')" 
-                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
-                        💵 Payment Received
+                        <button onclick="markPaid()"
+                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: var(--success); color: white; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Payment Received
                     </button>
-                    <button onclick="markPayLater('${billNo}')" 
-                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
-                        ⏳ Pay Later
+                    <button onclick="markPayLater()"
+                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; flex: 1; justify-content: center; min-width: 160px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Pay Later
                     </button>
                 </div>
 
@@ -1028,6 +1342,7 @@
                 // PERSISTENT LOCK: Save to localStorage
                 localStorage.setItem(PENDING_BILL_KEY, JSON.stringify({
                     billNo: res.bill_no,
+                    billNos: res.bill_nos || (res.bill_no ? [res.bill_no] : []),
                     totalAmount: res.total_amount,
                     content: res.content,
                     timestamp: Date.now()
@@ -1037,7 +1352,7 @@
                 printContentInIframe(res.content);
 
                 // Show confirmation overlay
-                showPaymentOverlay(res.bill_no, res.total_amount);
+                showPaymentOverlay(res.bill_no, res.total_amount, res.bill_nos);
 
             } else {
                 alert("Error: " + res.message);
@@ -1093,9 +1408,9 @@
                             <span style="font-size: 0.6rem; color: #94a3b8;">${time}</span>
                         </div>
                     </div>
-                    <button onclick="discardDraft(event, '${d.id}')" 
-                        style="position: absolute; top: 2px; right: 2px; background: #fee2e2; color: #ef4444; border: none; border-radius: 4px; width: 22px; height: 22px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
-                        ✕
+                    <button onclick="discardDraft(event, '${d.id}')"
+                        style="position: absolute; top: 2px; right: 2px; background: #fdecea; color: #b42318; border: 1px solid #f3d6d2; border-radius: 5px; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
             `;
@@ -1103,6 +1418,8 @@
     }
 
     async function saveDraft() {
+        await updateDetails();
+
         if (!CURRENT_CART || !CURRENT_CART.items || CURRENT_CART.items.length === 0) {
             alert("Cart is empty");
             return;
@@ -1196,26 +1513,13 @@
         container.innerHTML = cart.items.map(item => `
         <div class="cart-item">
             <div class="cart-item-info">
-                <div class="cart-item-title">${item.name}</div>
-                <div class="cart-item-details">
-                    <div class="qty-control">
-                        <button onclick="changeQuantity('${item.id}', ${item.count}, -1)" class="btn-qty minus" title="Decrease">
-                            −
-                        </button>
-                        <span class="qty-display">${item.count}</span>
-                        <button onclick="changeQuantity('${item.id}', ${item.count}, 1)" class="btn-qty plus" title="Increase">
-                            +
-                        </button>
-                    </div>
-                </div>
+                <span class="cart-item-title">${item.name}</span>
+                <span class="cart-item-price">₹${item.total}${item.count > 1 ? ` <span class="cart-unit">· ₹${item.amount} ea</span>` : ''}</span>
             </div>
-            <div class="cart-item-actions">
-                <div class="cart-item-price">₹${item.total}</div>
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">(₹${item.amount} ea)</div>
-                <!-- Optional: Keep Remove button or rely on Qty 0? Keeping it is safer for Quick Remove -->
-                <button onclick="removeFromCart('${item.id}')" class="btn-remove" title="Remove" style="margin-top: 4px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
+            <div class="qty-control">
+                <button onclick="changeQuantity('${item.id}', ${item.count}, -1)" class="btn-qty minus" title="Decrease / Remove">−</button>
+                <span class="qty-display">${item.count}</span>
+                <button onclick="changeQuantity('${item.id}', ${item.count}, 1)" class="btn-qty plus" title="Increase">+</button>
             </div>
         </div>
     `).join('');
@@ -1402,7 +1706,9 @@
 
         try {
             const res = await api('/cashier/billing/batch/add', {
-                dates: REPLICATE_DATES
+                dates: REPLICATE_DATES,
+                name: document.getElementById('devName').value,
+                star: document.getElementById('devStar').value
             });
 
             if (res.status === 'success') {
@@ -1459,13 +1765,13 @@
     if (pendingBill) {
         console.log("Restoring pending bill overlay for:", pendingBill.billNo);
         lastPrintContent = pendingBill.content;
-        showPaymentOverlay(pendingBill.billNo, pendingBill.totalAmount);
+        showPaymentOverlay(pendingBill.billNo, pendingBill.totalAmount, pendingBill.billNos);
     }
 
-    async function markPaid(billNo) {
+    async function markPaid() {
         try {
             const res = await api('/cashier/billing/update-status', {
-                bill_no: billNo,
+                bill_nos: CURRENT_BILL_NOS,
                 status: 'paid'
             });
             if (res.status === 'success') {
@@ -1480,11 +1786,10 @@
         }
     }
 
-    function markPayLater(billNo) {
+    function markPayLater() {
         // Hide buttons, show form
         document.getElementById('actionButtons').style.display = 'none';
         document.getElementById('payLaterForm').style.display = 'flex';
-        document.getElementById('plBillNo').value = billNo;
         document.getElementById('plPhone').focus();
     }
 
@@ -1495,7 +1800,6 @@
     }
 
     async function submitPayLater() {
-        const billNo = document.getElementById('plBillNo').value;
         const phone = document.getElementById('plPhone').value.trim();
 
         // Validation Rule: 10 Digits
@@ -1507,7 +1811,7 @@
 
         try {
             const res = await api('/cashier/billing/update-status', {
-                bill_no: billNo,
+                bill_nos: CURRENT_BILL_NOS,
                 status: 'pending',
                 phone: phone
             });
@@ -1607,9 +1911,16 @@
             .then(r => r.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Show Star and Malayalam Date
-                    badge.innerHTML = `${data.nakshatra_eng} / ${data.nakshatra_mal}<br><span style="font-size:0.85em; opacity:0.8; font-weight:normal;">${data.mal_date_str}</span>`;
-                    badge.style.display = 'block';
+                    const isToday = dateVal === new Date().toISOString().split('T')[0];
+                    const label = isToday ? "Today's star" : "Star of this date";
+                    badge.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="var(--accent)" stroke="none" style="flex:0 0 auto;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span style="display:flex; flex-direction:column; line-height:1.25; min-width:0;">
+                            <span style="font-size:.66rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700;">${label}</span>
+                            <span style="overflow:hidden; text-overflow:ellipsis;"><strong>${data.nakshatra_eng} / ${data.nakshatra_mal}</strong> <span style="font-weight:500; color:var(--text-muted);">· ${data.mal_date_str}</span></span>
+                        </span>
+                        <span style="margin-left:auto; font-size:.72rem; color:var(--primary); font-weight:700; white-space:nowrap;">Apply →</span>`;
+                    badge.style.display = 'flex';
                     badge.dataset.star = data.nakshatra_eng;
                 }
             });
