@@ -36,8 +36,9 @@ def login():
         error = None
 
         # Verify CAPTCHA
-        stored_answer = session.get('captcha_result')
-        if not captcha_answer or str(captcha_answer) != str(stored_answer):
+        # pop() so a known answer can't be replayed with the same cookie
+        stored_answer = session.pop('captcha_result', None)
+        if stored_answer is None or not captcha_answer or str(captcha_answer) != str(stored_answer):
             error = 'Invalid CAPTCHA answer.'
 
         if error is None:
@@ -96,9 +97,14 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = get_db().execute(
+        user = get_db().execute(
             'SELECT * FROM users WHERE id = ?', (user_id,)
         ).fetchone()
+        # A deleted or deactivated account must not keep a live session
+        if user is None or not user['is_active']:
+            session.clear()
+            user = None
+        g.user = user
 
 def login_required(view):
     @functools.wraps(view)

@@ -26,6 +26,11 @@ def _validate_pin(pin):
         return 'PIN must not exceed 20 characters.'
     return None
 
+_UPDATE_URL_PREFIXES = (
+    'https://api.github.com/repos/theagg-18/devalaya-pro/zipball/',
+    'https://codeload.github.com/theagg-18/devalaya-pro/',
+)
+
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 @admin_bp.before_request
@@ -168,10 +173,14 @@ def settings():
         
         # Handle Custom Theme Colors
         import json
+        import re
+        def _hex(field, default):
+            v = request.form.get(field, default)
+            return v if re.fullmatch(r'#[0-9A-Fa-f]{3,8}', v or '') else default
         custom_colors = {
-            'primary': request.form.get('custom_primary', '#000000'),
-            'secondary': request.form.get('custom_secondary', '#ffffff'),
-            'background': request.form.get('custom_background', '#f5f5f5')
+            'primary': _hex('custom_primary', '#000000'),
+            'secondary': _hex('custom_secondary', '#ffffff'),
+            'background': _hex('custom_background', '#f5f5f5')
         }
         custom_theme_colors = json.dumps(custom_colors)
         
@@ -1190,6 +1199,12 @@ def install_update():
     
     source = request.form.get('source') # URL or 'local'
     is_url = True
+
+    # Only accept zipballs from the official repo; anything else would let a
+    # forged form download and run arbitrary code on the server.
+    if source != 'local' and not (source or '').startswith(_UPDATE_URL_PREFIXES):
+        flash('Invalid update source.', 'error')
+        return redirect(url_for('admin.updates'))
     
     if source == 'local':
         if 'update_file' not in request.files:

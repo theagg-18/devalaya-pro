@@ -28,6 +28,10 @@ app = Flask(__name__,
             template_folder=os.path.join(basedir, 'templates'))
 
 app.config.from_object(Config)
+if Config.TRUSTED_PROXY_HOPS > 0:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=Config.TRUSTED_PROXY_HOPS,
+                            x_proto=Config.TRUSTED_PROXY_HOPS)
 csrf = CSRFProtect(app)
 limiter.init_app(app)
 
