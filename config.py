@@ -30,3 +30,10 @@ class Config:
     WTF_CSRF_HEADERS = ['X-CSRFToken']
     WTF_CSRF_TIME_LIMIT = 3600
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    # Set SESSION_COOKIE_SECURE=true when served over HTTPS (e.g. Cloudflare tunnel)
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+    # Number of trusted reverse proxies in front of the app (0 = none, LAN use).
+    # With a Cloudflare tunnel set this to 1 so rate limits apply per client IP.
+    TRUSTED_PROXY_HOPS = int(os.environ.get('TRUSTED_PROXY_HOPS', '0'))

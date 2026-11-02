@@ -1235,6 +1235,10 @@ def edit_bill(bill_id):
     if bill['status'] == 'cancelled':
          return {'status': 'error', 'message': 'Cannot edit a cancelled bill.'}
 
+    # Editing cancels the original bill, so apply the same ownership rule as cancel
+    if g.user['role'] == 'cashier' and bill['cashier_id'] != g.user['id']:
+        return {'status': 'error', 'message': 'You can only edit your own bills.'}, 403
+
     bill_items = db.execute('''
         SELECT bi.*, pm.name, pm.type
         FROM bill_items bi 
