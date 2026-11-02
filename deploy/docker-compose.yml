@@ -10,7 +10,9 @@ services:
       - devalaya_data:/data
       - devalaya_uploads:/app/static/uploads
     environment:
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      SESSION_COOKIE_SECURE: "true"
+      TRUSTED_PROXY_HOPS: "1"
       DB_PATH: /data/temple.db
       BACKUP_PATH: /data/backups
     healthcheck:
