@@ -18,13 +18,7 @@ _KNOWN_TABLES = frozenset({
     'bill_items', 'printers', 'cashier_sessions',
 })
 
-def _validate_pin(pin):
-    """Return error string or None."""
-    if len(pin) < 4:
-        return 'PIN must be at least 4 characters.'
-    if len(pin) > 20:
-        return 'PIN must not exceed 20 characters.'
-    return None
+from routes.auth import validate_pin as _validate_pin
 
 _UPDATE_URL_PREFIXES = (
     'https://api.github.com/repos/theagg-18/devalaya-pro/zipball/',
@@ -193,7 +187,19 @@ def settings():
             file = request.files['logo']
             if file and file.filename != '':
                 from werkzeug.utils import secure_filename
-                import imghdr
+                from PIL import Image, UnidentifiedImageError
+
+                # Validate actual image content before anything touches disk
+                try:
+                    with Image.open(file.stream) as img:
+                        detected = (img.format or '').lower()
+                        img.verify()
+                except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+                    detected = None
+                if detected not in _ALLOWED_IMAGE_TYPES:
+                    flash('Invalid image file. Only JPEG, PNG, GIF, WebP are allowed.', 'error')
+                    return redirect(url_for('admin.settings'))
+                file.stream.seek(0)
 
                 # Create upload dir
                 upload_folder = os.path.join(current_app.static_folder, 'uploads')
@@ -206,13 +212,6 @@ def settings():
                 new_filename = f"logo_{timestamp}_{filename}"
                 save_path = os.path.join(upload_folder, new_filename)
                 file.save(save_path)
-
-                # Validate actual image content (not just extension)
-                detected = imghdr.what(save_path)
-                if detected not in _ALLOWED_IMAGE_TYPES:
-                    os.remove(save_path)
-                    flash('Invalid image file. Only JPEG, PNG, GIF, WebP are allowed.', 'error')
-                    return redirect(url_for('admin.settings'))
 
                 logo_path = f"uploads/{new_filename}"
 
@@ -259,7 +258,7 @@ def users():
             username = request.form['username']
             pin = request.form['pin']
             role = request.form['role']
-            pin_error = _validate_pin(pin)
+            pin_error = _validate_pin(pin, role)
             if pin_error:
                 flash(pin_error, 'error')
             else:
@@ -296,12 +295,14 @@ def users():
         elif 'change_pin' in request.form:
             user_id = request.form['user_id']
             new_pin = request.form['new_pin']
-            pin_error = _validate_pin(new_pin)
+            target = db.execute('SELECT role FROM users WHERE id = ?', (user_id,)).fetchone()
+            pin_error = _validate_pin(new_pin, target['role'] if target else 'cashier')
             if pin_error:
                 flash(pin_error, 'error')
             else:
                 try:
-                    db.execute('UPDATE users SET pin = ? WHERE id = ?',
+                    # Resetting a PIN also unlocks an account locked by failed logins
+                    db.execute('UPDATE users SET pin = ?, failed_attempts = 0, locked_until = NULL WHERE id = ?',
                                (generate_password_hash(new_pin), user_id))
                     db.commit()
                     flash('PIN/Password updated successfully', 'success')

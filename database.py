@@ -349,8 +349,11 @@ def init_db():
         c.execute("ALTER TABLE temple_settings ADD COLUMN print_template_content TEXT")
         c.execute("UPDATE temple_settings SET print_template_content = ? WHERE id = 1", (default_template,))
     
-    # Always update the template on startup to ensure latest version
-    c.execute("UPDATE temple_settings SET print_template_content = ? WHERE id = 1", (default_template,))
+    # Fill in the default only when empty, so admin edits survive restarts
+    c.execute(
+        "UPDATE temple_settings SET print_template_content = ? "
+        "WHERE id = 1 AND (print_template_content IS NULL OR TRIM(print_template_content) = '')",
+        (default_template,))
 
     # 2. Printers
     c.execute('''
@@ -373,11 +376,22 @@ def init_db():
         )
     ''')
     
-    # Seed default admin if not exists (PIN stored hashed)
+    # Migration: login security columns
+    c.execute("PRAGMA table_info(users)")
+    user_cols = [col[1] for col in c.fetchall()]
+    if 'must_change_pin' not in user_cols:
+        c.execute("ALTER TABLE users ADD COLUMN must_change_pin INTEGER DEFAULT 0")
+    if 'failed_attempts' not in user_cols:
+        c.execute("ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0")
+    if 'locked_until' not in user_cols:
+        c.execute("ALTER TABLE users ADD COLUMN locked_until TEXT")
+
+    # Seed default admin if not exists (PIN stored hashed).
+    # The default PIN must be changed on first login.
     c.execute('SELECT count(*) FROM users WHERE role="admin"')
     if c.fetchone()[0] == 0:
         from werkzeug.security import generate_password_hash
-        c.execute('INSERT INTO users (username, pin, role) VALUES (?, ?, ?)',
+        c.execute('INSERT INTO users (username, pin, role, must_change_pin) VALUES (?, ?, ?, 1)',
                   ('admin', generate_password_hash('1234'), 'admin'))
 
     # 4. Puja/Item Master

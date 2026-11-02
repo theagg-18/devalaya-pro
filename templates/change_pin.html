@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 4rem auto;">
+    <div class="card">
+        <div class="text-center" style="margin-bottom: 1.5rem;">
+            <h2>Change PIN</h2>
+            {% if forced %}
+            <p style="color: #64748b; margin-top: 0.5rem;">
+                Your PIN is the default or too short. Please set a new one to continue.
+            </p>
+            {% endif %}
+        </div>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="current_pin">Current PIN</label>
+                <input type="password" id="current_pin" name="current_pin" required autofocus
+                    autocomplete="current-password">
+            </div>
+            <div class="form-group">
+                <label for="new_pin">New PIN (at least {{ min_length }} characters)</label>
+                <input type="password" id="new_pin" name="new_pin" required minlength="{{ min_length }}"
+                    maxlength="20" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="confirm_pin">Confirm New PIN</label>
+                <input type="password" id="confirm_pin" name="confirm_pin" required minlength="{{ min_length }}"
+                    maxlength="20" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary"
+                style="width: 100%; margin-top: 1rem; padding: 12px;">Save New PIN</button>
+            {% if forced %}
+            <a href="{{ url_for('auth.logout') }}" class="btn"
+                style="display: block; text-align: center; width: 100%; margin-top: 0.5rem;">Log out</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
