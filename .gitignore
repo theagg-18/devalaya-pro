@@ -132,3 +132,6 @@ updates/
 fresh_copy/
 temp_fresh/
 Devalaya_Portable_Final.zip
+
+# Updater backups
+update.zip.bak_*
