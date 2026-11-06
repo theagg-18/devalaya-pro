@@ -12,7 +12,7 @@
         <span class="tag tag-puja">{{ it.name }}{% if it.count and it.count > 1 %} ×{{ it.count }}{% endif %}</span>
         {% endfor %}
     </div>
-    <div class="cal-bill-meta">#{{ b.bill_no }} · ₹{{ "%.2f"|format(b.total_amount or 0) }}{% if b.phone %} · {{ b.phone }}{% endif %}</div>
+    <div class="cal-bill-meta"><span style="margin-right: 12px;">#{{ b.bill_no }}</span><span style="margin-right: 12px;">₹{{ "%.2f"|format(b.total_amount or 0) }}</span>{% if b.phone %}<span>{{ b.phone }}</span>{% endif %}</div>
 </div>
 {% endmacro %}
 
@@ -23,7 +23,7 @@
         <span class="cal-count">{{ items|length }}</span>
     </summary>
     {% if items %}
-    <button type="button" class="btn btn-secondary cal-print-btn"
+    <button type="button" class="btn btn-secondary cal-print-btn no-wrap"
         onclick="bulkPrint([{% for b in items %}{{ b.id }},{% endfor %}])">Print all receipts ({{ items|length }})</button>
     {% set ns = namespace(cur='') %}
     {% for b in items %}
@@ -52,9 +52,9 @@
     <!-- ===== Calendar view ===== -->
     <div id="viewCalendar">
         <div class="cal-nav">
-            <a class="btn btn-secondary" href="{{ url_for('admin.pooja_calendar', year=prev_year, month=prev_month) }}">&larr; Prev</a>
+            <a class="btn btn-secondary" href="{{ url_for('admin.pooja_calendar', year=prev_year, month=prev_month) }}">Previous month</a>
             <span class="cal-month-label">{{ month_label }}</span>
-            <a class="btn btn-secondary" href="{{ url_for('admin.pooja_calendar', year=next_year, month=next_month) }}">Next &rarr;</a>
+            <a class="btn btn-secondary" href="{{ url_for('admin.pooja_calendar', year=next_year, month=next_month) }}">Next month</a>
         </div>
 
         <div class="calendar-grid cal-head-row">
@@ -70,7 +70,7 @@
                 {% if cell.bills %}
                 <details class="cal-cell-details">
                     <summary>{{ cell.bills|length }} pooja{{ 's' if cell.bills|length != 1 else '' }}</summary>
-                    <button type="button" class="btn btn-secondary cal-print-btn"
+                    <button type="button" class="btn btn-secondary cal-print-btn no-wrap"
                         onclick="bulkPrint([{% for b in cell.bills %}{{ b.id }},{% endfor %}])">Print {{ cell.bills|length }} receipt{{ 's' if cell.bills|length != 1 else '' }}</button>
                     {% for b in cell.bills %}{{ bill_line(b) }}{% endfor %}
                 </details>
@@ -96,6 +96,13 @@
         {{ list_group('Past', group_past, 'badge-past', False) }}
     </div>
 </div>
+
+<style>
+    /* Hallmark · app screen · redesign: polish */
+    .no-wrap {
+        white-space: nowrap;
+    }
+</style>
 
 <script>
 function printContentInIframe(content) {

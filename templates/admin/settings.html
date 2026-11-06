@@ -19,11 +19,11 @@
             <div style="display: flex; align-items: center; gap: 1rem;">
                 {% if settings.logo_path %}
                 <img src="{{ url_for('static', filename=settings.logo_path) }}" alt="Current Logo"
-                    style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 1px solid #ddd;">
+                    style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 1px solid var(--border-strong);">
                 {% endif %}
                 <input type="file" id="logo" name="logo" accept="image/*" style="border: none; padding: 0;">
             </div>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 4px;">Upload a square image (PNG/JPG) for best
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Upload a square image (PNG/JPG) for best
                 results.</p>
         </div>
 
@@ -31,17 +31,17 @@
             <label>Temple Location (For Calendar Accuracy)</label>
             <div style="display: flex; gap: 1rem;">
                 <div style="flex: 1;">
-                    <label for="latitude" style="font-size: 0.8rem; color: #666;">Latitude</label>
+                    <label for="latitude" style="font-size: 0.8rem; color: var(--text-muted);">Latitude</label>
                     <input type="number" step="any" id="latitude" name="latitude"
                         value="{{ settings.latitude or 10.85 }}" placeholder="10.85">
                 </div>
                 <div style="flex: 1;">
-                    <label for="longitude" style="font-size: 0.8rem; color: #666;">Longitude</label>
+                    <label for="longitude" style="font-size: 0.8rem; color: var(--text-muted);">Longitude</label>
                     <input type="number" step="any" id="longitude" name="longitude"
                         value="{{ settings.longitude or 76.27 }}" placeholder="76.27">
                 </div>
             </div>
-            <p style="font-size: 0.75rem; color: #888; margin-top: 4px;">Default is 10.85, 76.27 (Kerala Standard).
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Default is 10.85, 76.27 (Kerala Standard).
                 Change only for precise local calculations.</p>
         </div>
 
@@ -65,7 +65,7 @@
         <div class="form-group">
             <label for="receipt_footer">Receipt Footer Message</label>
             <textarea id="receipt_footer" name="receipt_footer" rows="2"
-                style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px;">{{ settings.receipt_footer }}</textarea>
+                style="width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 8px;">{{ settings.receipt_footer }}</textarea>
         </div>
 
         <div class="form-group">
@@ -101,8 +101,8 @@
 
             <!-- Custom Theme Colors (Hidden by default) -->
             <div id="custom-theme-colors"
-                style="margin-top: 1rem; padding: 1rem; border: 1px dashed #ccc; border-radius: 8px; display: none;">
-                <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Custom Colors</h4>
+                style="margin-top: 1rem; padding: 1rem; border: 1px dashed var(--border-strong); border-radius: 8px; display: none;">
+                <h3 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Custom Colors</h3>
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div style="flex: 1; min-width: 120px;">
                         <label for="custom_primary" style="font-size: 0.8rem;">Primary</label>
@@ -130,7 +130,7 @@
                     id="preview-primary">Primary</div>
                 <div style="width: 60px; height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 600;"
                     id="preview-secondary">Secondary</div>
-                <div style="width: 60px; height: 40px; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600;"
+                <div style="width: 60px; height: 40px; border-radius: 4px; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600;"
                     id="preview-bg">Background</div>
                 <div style="width: 60px; height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 600;"
                     id="preview-success">Success</div>
@@ -139,12 +139,12 @@
 
         <div class="form-group">
             <label for="print_template_content">Print Receipt Template (HTML)</label>
-            <p style="font-size: 0.8rem; color: #64748b; margin-top: -4px; margin-bottom: 8px;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -4px; margin-bottom: 8px;">
                 Use Jinja2 variables: <code>slip.bill_no</code>, <code>slip.devotee_name</code>,
                 <code>slip.items</code>, etc.
             </p>
             <textarea id="print_template_content" name="print_template_content" rows="15"
-                style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 13px;">{{ settings.print_template_content }}</textarea>
+                style="width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-family: monospace; font-size: 13px;">{{ settings.print_template_content }}</textarea>
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
@@ -237,7 +237,7 @@
             document.getElementById('preview-bg').style.backgroundColor = colors.background;
             document.getElementById('preview-success').style.backgroundColor = colors.success;
         }
-        document.getElementById('preview-bg').style.color = '#333';
+        document.getElementById('preview-bg').style.color = 'var(--text-main)';
     }
 
     // Initialize preview on page load

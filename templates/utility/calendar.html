@@ -5,7 +5,7 @@
 {% block content %}
 <div class="card">
     <h1>Calendar Utility</h1>
-    <div class="tabs" style="display: flex; gap: 1rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+    <div class="tabs" style="display: flex; gap: 1rem; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
         <button class="tab-btn active" onclick="switchTab('eng-to-mal')"
             style="padding: 10px 20px; background: none; border: none; font-weight: 600; cursor: pointer; border-bottom: 2px solid var(--primary); color: var(--primary);">English
             to Malayalam</button>
@@ -22,7 +22,7 @@
         </div>
         <div id="engResult" class="result-box"
             style="margin-top: 20px; padding: 20px; background: var(--bg); border-radius: 8px; display: none;">
-            <h3>Result</h3>
+            <h2 style="font-size: 1.17rem;">Result</h2>
             <p><strong>Malayalam Date:</strong> <span id="resMalDate"></span></p>
             <p><strong>Star:</strong> <span id="resStar"></span></p>
         </div>
@@ -52,7 +52,7 @@
 
         <div id="malResult" class="result-box"
             style="margin-top: 20px; padding: 20px; background: var(--bg); border-radius: 8px; display: none;">
-            <h3>Result</h3>
+            <h2 style="font-size: 1.17rem;">Result</h2>
             <p><strong>English Date:</strong> <span id="resEngDate"
                     style="font-size: 1.2rem; font-weight: bold;"></span></p>
             <p><strong>Star:</strong> <span id="resEngStar"></span></p>

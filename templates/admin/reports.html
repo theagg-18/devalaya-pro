@@ -8,10 +8,10 @@
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
             <form method="get" style="display: flex; gap: 0.5rem; align-items: center;">
                 <input type="text" name="q" value="{{ search_query }}" placeholder="Search Name/Bill..."
-                    style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    style="padding: 8px; border: 1px solid var(--border-strong); border-radius: 4px;">
                 <input type="date" name="start_date" value="{{ start_date }}" title="From Date" style="width: auto;">
                 <input type="date" name="end_date" value="{{ end_date }}" title="To Date" style="width: auto;">
-                <select name="payment_status" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                <select name="payment_status" style="padding: 8px; border: 1px solid var(--border-strong); border-radius: 4px;">
                     <option value="all" {% if payment_status=='all' %}selected{% endif %}>All Status</option>
                     <option value="paid" {% if payment_status=='paid' %}selected{% endif %}>Paid</option>
                     <option value="pending" {% if payment_status=='pending' %}selected{% endif %}>Pending</option>
@@ -28,27 +28,27 @@
 
     <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
         <div
-            style="padding: 1rem; background: #e0e7ff; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
-            <div style="font-size: 0.9rem; color: #4338ca; margin-bottom: 4px;">Revenue listed</div>
-            <div style="font-size: 2rem; font-weight: 700; color: #3730a3;">₹{{ "%.2f"|format(total_amount -
+            style="padding: 1rem; background: var(--info-bg); border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: var(--info-dark); margin-bottom: 4px;">Revenue listed</div>
+            <div style="font-size: 2rem; font-weight: 700; color: var(--info-dark);">₹{{ "%.2f"|format(total_amount -
                 pending_amount) }}</div>
         </div>
         <div
-            style="padding: 1rem; background: #fef3c7; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
-            <div style="font-size: 0.9rem; color: #b45309; margin-bottom: 4px;">Pending Amount</div>
-            <div style="font-size: 2rem; font-weight: 700; color: #78350f;">₹{{ "%.2f"|format(pending_amount) }}</div>
+            style="padding: 1rem; background: var(--warning-bg); border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: var(--warning); margin-bottom: 4px;">Pending Amount</div>
+            <div style="font-size: 2rem; font-weight: 700; color: var(--warning-dark);">₹{{ "%.2f"|format(pending_amount) }}</div>
         </div>
         <div
-            style="padding: 1rem; background: #dcfce7; border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
-            <div style="font-size: 0.9rem; color: #15803d; margin-bottom: 4px;">Bill Count</div>
-            <div style="font-size: 2rem; font-weight: 700; color: #14532d;">{{ count }}</div>
+            style="padding: 1rem; background: var(--success-bg); border-radius: 8px; flex: 1; text-align: center; min-width: 200px;">
+            <div style="font-size: 0.9rem; color: var(--success-dark); margin-bottom: 4px;">Bill Count</div>
+            <div style="font-size: 2rem; font-weight: 700; color: var(--success-dark);">{{ count }}</div>
         </div>
     </div>
 
     <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #e2e8f0;">
+                <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                     <th style="padding: 12px;">Bill Info</th>
                     <th style="padding: 12px;">Cashier</th>
                     <th style="padding: 12px;">Devotee & Items</th>
@@ -57,18 +57,18 @@
             </thead>
             <tbody>
                 {% for bill in bills %}
-                <tr style="border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+                <tr style="border-bottom: 1px solid var(--border); vertical-align: top;">
                     <td style="padding: 12px;">
                         <div style="font-family: monospace; font-weight: 600;">#{{ bill.bill_no or 'Pending' }}</div>
-                        <div style="font-size: 0.8rem; color: #64748b;">{{ bill.created_at }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">{{ bill.created_at }}</div>
                         {% if bill.status == 'cancelled' %}
                         <div style="margin-top: 4px;">
                             <span
-                                style="background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">CANCELLED</span>
+                                style="background: var(--danger-bg); color: var(--danger-dark); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">CANCELLED</span>
                         </div>
                         {% if bill.remarks %}
                         <div
-                            style="margin-top: 4px; background: #fff5f5; border: 1px dashed #feb2b2; padding: 4px; border-radius: 4px; font-size: 0.75rem; color: #c53030;">
+                            style="margin-top: 4px; background: var(--danger-soft); border: 1px dashed var(--danger-border); padding: 4px; border-radius: 4px; font-size: 0.75rem; color: var(--danger);">
                             <strong>Reason:</strong> {{ bill.remarks }}
                         </div>
                         {% endif %}
@@ -78,15 +78,15 @@
                         {% if bill.payment_status == 'pending' and bill.status != 'cancelled' %}
                         <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
                             <span
-                                style="background: #fef3c7; color: #b45309; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; width: fit-content;">PENDING
+                                style="background: var(--warning-bg); color: var(--warning); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; width: fit-content;">PENDING
                                 PAYMENT</span>
                             {% if bill.phone %}
-                            <span style="font-size: 0.75rem; color: #b45309; display:inline-flex; align-items:center; gap:4px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.74-1.74a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92z"></path></svg>{{ bill.phone }}</span>
+                            <span style="font-size: 0.75rem; color: var(--warning); display:inline-flex; align-items:center; gap:4px;"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.74-1.74a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92z"></path></svg>{{ bill.phone }}</span>
                             {% endif %}
 
                             <button onclick="markAsPaid('{{ bill.id }}', '{{ bill.bill_no }}')" class="no-print"
                                 title="Mark as Paid"
-                                style="background: #22c55e; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width: fit-content; margin-top: 2px;">
+                                style="background: var(--success); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width: fit-content; margin-top: 2px;">
                                 Receive Payment
                             </button>
                         </div>
@@ -95,7 +95,7 @@
                     <td style="padding: 12px;">
                         <span class="badge-cashier" title="Created By">{{ bill.cashier_name }}</span>
                         {% if bill.received_by %}
-                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
                             Rec. by: <span style="font-weight: 600;">{{ bill.received_by }}</span>
                         </div>
                         {% endif %}
@@ -103,7 +103,7 @@
                     <td style="padding: 12px;">
                         <div style="font-weight: 600;">{{ bill.devotee_name or 'N/A' }}</div>
                         {% if bill.star %}
-                        <div style="font-size: 0.85rem; color: #64748b;">
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
                             Star: {{ star_map.get(bill.star, bill.star) }} {% if bill.star in star_map %}({{ bill.star
                             }}){% endif %}
                         </div>
@@ -112,10 +112,10 @@
                             style="font-size: 0.85rem; color: var(--primary); font-weight: 500;">Vazhipadu Date: {{
                             bill.scheduled_date }}</div>{% endif %}
 
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0;">
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border);">
                             {% for item in bill.line_items %}
                             <div
-                                style="font-size: 0.8rem; display: flex; justify-content: space-between; color: #475569;">
+                                style="font-size: 0.8rem; display: flex; justify-content: space-between; color: var(--text-muted);">
                                 <span>• {{ item.name }} {% if item.count > 1 %}(x{{ item.count }}){% endif %}</span>
                                 <span>₹{{ "%.2f"|format(item.total) }}</span>
                             </div>
@@ -140,18 +140,18 @@
         {% if current_page > 1 %}
         <a href="{{ url_for('admin.reports', page=current_page-1, q=search_query, start_date=start_date, end_date=end_date, payment_status=payment_status) }}"
             class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-            &laquo; Previous
+            Previous page
         </a>
         {% endif %}
 
-        <span style="color: #64748b; font-size: 0.9rem;">
+        <span style="color: var(--text-muted); font-size: 0.9rem;">
             Page <strong>{{ current_page }}</strong> of {{ total_pages }}
         </span>
 
         {% if current_page < total_pages %} <a
             href="{{ url_for('admin.reports', page=current_page+1, q=search_query, start_date=start_date, end_date=end_date, payment_status=payment_status) }}"
             class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-            Next &raquo;
+            Next page
             </a>
             {% endif %}
     </div>

@@ -10,7 +10,6 @@
             <div
                 style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
-                    <div class="pos-eyebrow">Catalogue</div>
                     <h3 class="pos-title">Select Item <span class="mal">തിരഞ്ഞെടുക്കുക</span></h3>
                 </div>
                 <div
@@ -21,12 +20,12 @@
                         <button class="btn-filter" onclick="filterCategory('item')">Donation</button>
                     </div>
                     <div class="pos-search">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" id="searchBox" placeholder="Search (തിരയുക)..." onkeyup="filterItems()">
+                        <input type="text" id="searchBox" aria-label="Search items" placeholder="Search (തിരയുക)..." onkeyup="filterItems()">
                     </div>
                 </div>
             </div>
@@ -61,7 +60,7 @@
 
         <!-- Batch Indicator -->
         <div id="batchIndicator"
-            style="background: #1f2430; color: #eef1f6; padding: 8px 16px; font-size: 0.86rem; display: flex; justify-content: space-between; align-items: center; gap: .75rem; position: sticky; top: 0; z-index: 6;">
+            style="background: var(--text-main); color: var(--surface-alt); padding: 8px 16px; font-size: 0.86rem; display: flex; justify-content: space-between; align-items: center; gap: .75rem; position: sticky; top: 0; z-index: 6;">
             <div style="display: flex; gap: 10px; align-items: center;">
                 {% set ns = namespace(total=0) %}
                 {% for b in batch %}
@@ -74,9 +73,9 @@
                     <strong>₹{{ "%.0f"|format(ns.total) }}</strong>
                 </span>
                 {% if batch|length > 0 %}
-                <button onclick="showBatchModal()" title="View/Edit Batch"
-                    style="background: rgba(255,255,255,.12); border: none; color: #fff; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                <button onclick="showBatchModal()" title="View/Edit Batch" aria-label="View/Edit Batch"
+                    style="background: color-mix(in srgb, var(--surface) 12%, transparent); border: none; color: var(--surface); width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
@@ -87,20 +86,19 @@
 
             {% if batch|length > 0 %}
             <button onclick="showPrintDialog()"
-                style="background: #fff; border: none; color: #1f2430; padding: 7px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .82rem; letter-spacing: .02em;">PRINT
-                ALL</button>
+                style="background: var(--surface); border: none; color: var(--text-main); padding: 7px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .82rem;">Print all</button>
             {% endif %}
         </div>
 
         <!-- Browser Drafts Section (Rendered via JS) -->
         <div id="draftsSection"
-            style="display: none; padding: 1rem; background: #fffbeb; border-bottom: 1px solid #fde68a;">
+            style="display: none; padding: 1rem; background: var(--warning-bg); border-bottom: 1px solid var(--warning-border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <span
-                    style="font-size: 0.75rem; color: #92400e; font-weight: 700; text-transform: uppercase; margin: 0;">Pending
+                    style="font-size: 0.75rem; color: var(--warning-dark); font-weight: 700; margin: 0;">Pending
                     Drafts</span>
                 <button onclick="clearAllDrafts()"
-                    style="background: none; border: none; color: #ef4444; font-size: 0.7rem; font-weight: 600; cursor: pointer;">Clear
+                    style="background: none; border: none; color: var(--danger-bright); font-size: 0.7rem; font-weight: 600; cursor: pointer;">Clear
                     All</button>
             </div>
             <div id="draftsList" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem;">
@@ -134,9 +132,9 @@
                         onchange="updateDetails(); fetchStarForDate()"
                         style="font-size: 0.92rem; flex: 1; min-width: 0;">
 
-                    <button type="button" onclick="openStarFinder()" title="Find Next Star Date"
+                    <button type="button" onclick="openStarFinder()" title="Find Next Star Date" aria-label="Find Next Star Date"
                         style="flex: 0 0 auto; background: var(--surface); border: 1px solid var(--pos-line-strong); color: var(--primary); padding: 9px 11px; border-radius: 10px; cursor: pointer; display: flex; align-items: center;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                             <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -183,7 +181,7 @@
         </div>
 
         <!-- Totals & Actions -->
-        <div class="billing-totals-section" style="padding: 0.7rem 1.1rem 0.85rem; background: var(--surface); border-top: 1px solid var(--pos-line-strong); position: sticky; bottom: 0; z-index: 6; box-shadow: 0 -6px 16px -8px rgba(16,24,40,.18);">
+        <div class="billing-totals-section" style="padding: 0.7rem 1.1rem 0.85rem; background: var(--surface); border-top: 1px solid var(--pos-line-strong); position: sticky; bottom: 0; z-index: 6; box-shadow: var(--pos-shadow-up);">
             <div
                 style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem;">
                 <span style="font-size: 1rem; font-weight: 600; color: var(--text-muted);">Total <span style="font-weight: 400;">(ആകെ)</span></span>
@@ -192,9 +190,9 @@
 
             {% if cart.is_edit_mode %}
             <div id="editModeTotals"
-                style="background: #fff7ed; border: 1px dashed #fdba74; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
+                style="background: var(--warning-bg); border: 1px dashed var(--warning-border); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
                 <div
-                    style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; color: #64748b;">
+                    style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">
                     <span>Original Bill Total:</span>
                     <span>₹{{ "%.0f"|format(cart.original_total|default(0)) }}</span>
                 </div>
@@ -202,13 +200,13 @@
                 {% set diff = (cart.total|default(0) - cart.original_total|default(0)) %}
 
                 {% if diff < 0 %} <div id="editModeDiff"
-                    style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: #166534; border-top: 1px solid #fed7aa; padding-top: 4px; margin-top: 4px;">
+                    style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: var(--success-dark); border-top: 1px solid var(--warning-border); padding-top: 4px; margin-top: 4px;">
                     <span>Cashier to Refund:</span>
                     <span>₹{{ "%.0f"|format(diff|abs) }}</span>
             </div>
             {% else %}
             <div id="editModeDiff"
-                style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: #b91c1c; border-top: 1px solid #fed7aa; padding-top: 4px; margin-top: 4px;">
+                style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: var(--danger-dark); border-top: 1px solid var(--warning-border); padding-top: 4px; margin-top: 4px;">
                 <span>Devotee to Pay:</span>
                 <span>₹{{ "%.0f"|format(diff|abs) }}</span>
             </div>
@@ -222,8 +220,8 @@
                 <button onclick="saveDraft()" class="btn btn-ghost" title="Save as Draft">Draft</button>
                 <button onclick="addToBatch()" class="btn btn-batch">Batch</button>
                 <button onclick="showReplicateModal()" class="btn btn-ghost" title="Replicate to Multiple Dates"
-                    style="padding-left: 12px; padding-right: 12px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    aria-label="Replicate to Multiple Dates" style="padding-left: 12px; padding-right: 12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2"></rect>
                         <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -247,50 +245,49 @@
 
 <!-- View Batch Modal -->
 <div id="batchModal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--pos-scrim); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
     <div class="card"
         style="width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; margin: 0;">
         <div
-            style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            style="padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <h3 style="margin: 0; font-size: 1.25rem;">Batch ({{ batch|length }})</h3>
                 {% if batch|length > 0 %}
                 <button onclick="clearBatch()"
-                    style="font-size: 0.8rem; color: #ef4444; border: 1px solid #ef4444; background: #fef2f2; padding: 2px 8px; border-radius: 4px; cursor: pointer;">Clear
+                    style="font-size: 0.8rem; color: var(--danger-bright); border: 1px solid var(--danger-bright); background: var(--danger-soft); padding: 2px 8px; border-radius: 4px; cursor: pointer;">Clear
                     All</button>
                 {% endif %}
             </div>
             <button onclick="document.getElementById('batchModal').style.display='none'"
-                style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
 
         <div style="padding: 1rem; overflow-y: auto; flex: 1;">
             {% for bill in batch %}
             <div
-                style="padding: 0.75rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                style="padding: 0.75rem; border-bottom: 1px solid var(--surface-sunken); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
                 <div style="min-width: 0;">
                     <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
                         bill['devotee_name'] or 'No Name' }}</div>
-                    <div style="font-size: 0.85rem; color: #64748b;">
-                        {{ star_map.get(bill['star'], bill['star']) }} {% if bill['star'] in star_map %}({{ bill['star']
-                        }}){% endif %} • {{ bill['items']|length }} items • <span
-                            style="color: #475569; font-weight: 500;">{{
-                            bill['scheduled_date'].split('-')[::-1]|join('-') }}</span>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 0 12px;">
+                        <span>{{ star_map.get(bill['star'], bill['star']) }}{% if bill['star'] in star_map %} ({{ bill['star'] }}){% endif %}</span>
+                        <span>{{ bill['items']|length }} items</span>
+                        <span style="font-weight: 500;">{{ bill['scheduled_date'].split('-')[::-1]|join('-') }}</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <div style="font-weight: 600;">₹{{ "%.0f"|format(bill.total) }}</div>
-                    <button onclick="handleRecallBatchItem(this)" data-index="{{ loop.index0 }}" title="Edit"
+                    <button onclick="handleRecallBatchItem(this)" data-index="{{ loop.index0 }}" title="Edit" aria-label="Edit"
                         style="color: var(--primary); background: var(--pos-soft); border: 1px solid var(--pos-line-strong); padding: 6px; border-radius: 7px; cursor: pointer; display: flex;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                     </button>
-                    <button onclick="handleDeleteBatchItem(this)" data-index="{{ loop.index0 }}" title="Remove"
-                        style="color: #b42318; background: #fdecea; border: 1px solid #f3d6d2; padding: 6px; border-radius: 7px; cursor: pointer; display: flex;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    <button onclick="handleDeleteBatchItem(this)" data-index="{{ loop.index0 }}" title="Remove" aria-label="Remove"
+                        style="color: var(--danger-dark); background: var(--danger-soft); border: 1px solid var(--danger-border); padding: 6px; border-radius: 7px; cursor: pointer; display: flex;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -304,7 +301,7 @@
         </div>
 
         <div
-            style="padding: 1rem; border-top: 1px solid #e2e8f0; text-align: right; background: #f8fafc; border-radius: 0 0 12px 12px;">
+            style="padding: 1rem; border-top: 1px solid var(--border); text-align: right; background: var(--surface-alt); border-radius: 0 0 12px 12px;">
             <button onclick="document.getElementById('batchModal').style.display='none'"
                 class="btn btn-secondary">Close</button>
         </div>
@@ -313,7 +310,7 @@
 
 <!-- Print Dialog Modal -->
 <div id="printDialog"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem; overflow-y: auto;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--pos-scrim); z-index: 1000; justify-content: center; align-items: center; padding: 1rem; overflow-y: auto;">
     <div class="card"
         style="width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; padding: 1.5rem; margin: auto;">
         <h3 class="mb-4" style="font-size: 1.25rem;">Print Options</h3>
@@ -321,7 +318,7 @@
 
         <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
             <label
-                style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
                 <input type="radio" name="printGroup" value="puja" checked>
                 <div style="min-width: 0;">
                     <strong>Group by Vazhipadu (Default)</strong>
@@ -331,7 +328,7 @@
             </label>
 
             <label
-                style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
                 <input type="radio" name="printGroup" value="devotee">
                 <div style="min-width: 0;">
                     <strong>Group by Devotee</strong>
@@ -344,20 +341,27 @@
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
             <button onclick="document.getElementById('printDialog').style.display='none'"
                 class="btn btn-secondary">Cancel</button>
-            <button onclick="processBatchPrint()" class="btn btn-primary">PRINT ALL</button>
+            <button onclick="processBatchPrint()" class="btn btn-primary">Print all</button>
         </div>
     </div>
 </div>
 
 <style>
+    /* Hallmark · app screen · redesign: polish */
     /* ===== POS Modern Theme (brand color is theme-variable) ===== */
-    .billing-container {
-        --pos-line: #edeff2;
-        --pos-line-strong: #e2e5ea;
+    :root {
+        --pos-line: var(--border);
+        --pos-line-strong: var(--border);
         --pos-ink: var(--text-main);
-        --pos-soft: #f6f7f9;
-        --pos-danger: #dc2626;
+        --pos-soft: var(--surface-alt);
+        --pos-danger: var(--danger);
         --pos-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+        --pos-shadow-sm: 0 3px 8px rgba(16, 24, 40, .06);
+        --pos-shadow-up: 0 -6px 16px -8px rgba(16, 24, 40, .18);
+        --pos-shadow-up-sm: 0 -4px 12px -2px rgba(16, 24, 40, .08);
+        --pos-shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, .25);
+        --pos-scrim: rgba(0, 0, 0, .5);
+        --pos-scrim-strong: rgba(0, 0, 0, .9);
     }
 
     /* Panels */
@@ -378,17 +382,9 @@
     }
 
     .pos-panel-head {
-        padding: 14px 18px;
+        padding: 16px 20px;
         border-bottom: 1px solid var(--pos-line);
         background: var(--pos-soft);
-    }
-
-    .pos-eyebrow {
-        font-size: .7rem;
-        font-weight: 700;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        color: var(--text-muted);
     }
 
     .pos-title {
@@ -424,7 +420,7 @@
 
     .pos-search input {
         width: 100%;
-        padding: 9px 12px 9px 36px;
+        padding: 8px 12px 8px 36px;
         font-size: .9rem;
         border: 1px solid var(--pos-line-strong);
         border-radius: 9px;
@@ -436,7 +432,7 @@
         position: relative;
         background: var(--surface);
         border: 1px solid var(--pos-line);
-        padding: 14px;
+        padding: 16px;
         border-radius: 16px;
         cursor: pointer;
         transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
@@ -445,9 +441,10 @@
         flex-direction: column;
         justify-content: space-between;
         align-items: stretch;
-        gap: 10px;
+        gap: 8px;
         min-height: 116px;
         overflow: hidden;
+        white-space: nowrap;
     }
 
     .item-btn:hover {
@@ -461,6 +458,7 @@
     }
 
     .item-name {
+        white-space: normal;
         font-weight: 600;
         font-size: .92rem;
         line-height: 1.3;
@@ -522,8 +520,8 @@
         background: var(--surface);
         border: 1px solid var(--pos-line);
         border-radius: 11px;
-        padding: 8px 14px;
-        margin-bottom: 6px;
+        padding: 8px 16px;
+        margin-bottom: 8px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -532,7 +530,7 @@
     }
 
     .cart-item:hover {
-        box-shadow: 0 3px 8px rgba(16, 24, 40, .06);
+        box-shadow: var(--pos-shadow-sm);
         border-color: var(--pos-line-strong);
     }
 
@@ -554,6 +552,7 @@
     }
 
     .cart-item-price {
+        font-variant-numeric: tabular-nums;
         font-weight: 700;
         font-size: .95rem;
         color: var(--pos-ink);
@@ -579,15 +578,15 @@
     .pos-panel--cart input[type="text"],
     .pos-panel--cart input[type="date"],
     .pos-panel--cart select {
-        padding: 7px 11px;
+        padding: 8px 12px;
     }
 
     /* Star-of-date line */
     .pos-starline {
-        margin-top: 6px;
+        margin-top: 8px;
         align-items: center;
         gap: 8px;
-        padding: 6px 11px;
+        padding: 8px 12px;
         border-radius: 9px;
         background: rgba(var(--accent-rgb), .12);
         border: 1px solid rgba(var(--accent-rgb), .35);
@@ -615,14 +614,14 @@
 
     .btn-cta {
         width: 100%;
-        padding: 11px 16px;
+        padding: 12px 16px;
         font-size: 0.98rem;
         font-weight: 700;
         border-radius: 11px;
     }
 
     .pos-actions .btn {
-        padding: 9px 12px;
+        padding: 8px 12px;
     }
 
     .btn-remove {
@@ -636,23 +635,23 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all .15s;
+        transition: background-color .15s, border-color .15s, color .15s;
     }
 
     .btn-remove:hover {
-        background: rgba(220, 38, 38, .08);
-        border-color: rgba(220, 38, 38, .35);
+        background: color-mix(in srgb, var(--danger) 8%, transparent);
+        border-color: color-mix(in srgb, var(--danger) 35%, transparent);
     }
 
     /* Qty Controls */
     .qty-control {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         margin-top: 4px;
         background: var(--pos-soft);
         border: 1px solid var(--pos-line);
-        padding: 3px;
+        padding: 4px;
         border-radius: 9px;
         width: fit-content;
     }
@@ -671,7 +670,7 @@
         font-weight: 700;
         font-size: 1rem;
         color: var(--pos-ink);
-        transition: all .12s;
+        transition: background-color .12s, border-color .12s, color .12s;
     }
 
     .btn-qty:hover {
@@ -681,15 +680,16 @@
 
     .btn-qty.minus:hover {
         color: var(--pos-danger);
-        border-color: rgba(220, 38, 38, .35);
+        border-color: color-mix(in srgb, var(--danger) 35%, transparent);
     }
 
     .btn-qty.plus:hover {
         color: var(--success);
-        border-color: rgba(46, 125, 50, .35);
+        border-color: color-mix(in srgb, var(--success) 35%, transparent);
     }
 
     .qty-display {
+        text-wrap: balance;
         font-weight: 700;
         font-size: .95rem;
         min-width: 24px;
@@ -701,13 +701,13 @@
     .btn-filter {
         background: var(--surface);
         border: 1px solid var(--pos-line-strong);
-        padding: 6px 14px;
+        padding: 8px 16px;
         border-radius: 999px;
         font-size: .82rem;
         font-weight: 600;
         color: var(--text-muted);
         cursor: pointer;
-        transition: all .12s;
+        transition: background-color .12s, border-color .12s, color .12s;
     }
 
     .btn-filter:hover {
@@ -730,7 +730,7 @@
     .pos-actions .btn {
         width: 100%;
         font-size: .92rem;
-        padding: 11px 12px;
+        padding: 12px 12px;
     }
 
     .btn-ghost {
@@ -762,7 +762,7 @@
             border-top: 1px solid var(--pos-line-strong);
             z-index: 50;
             padding: 1rem !important;
-            box-shadow: 0 -4px 12px -2px rgba(16, 24, 40, .08);
+            box-shadow: var(--pos-shadow-up-sm);
         }
 
         /* Panels: auto height, full width on mobile */
@@ -799,7 +799,7 @@
 
         #batchIndicator {
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 8px;
         }
 
         /* Payment / print overlays: keep action buttons stacked & reachable */
@@ -811,20 +811,20 @@
 
 <!-- Replicate Modal -->
 <div id="replicateModal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--pos-scrim); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
     <div class="card"
         style="width: 100%; max-width: 400px; padding: 1.5rem; margin: auto; display: flex; flex-direction: column; gap: 1rem;">
         <h3 style="margin: 0; font-size: 1.25rem;">Replicate to Dates</h3>
-        <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Select dates to create copies of this bill.</p>
+        <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Select dates to create copies of this bill.</p>
 
         <div style="display: flex; gap: 0.5rem;">
-            <input type="date" id="repDateInput"
-                style="flex: 1; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+            <input type="date" id="repDateInput" aria-label="Replication date"
+                style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
             <button onclick="addRepDate()" class="btn btn-secondary">Add</button>
         </div>
 
         <div id="repDateList"
-            style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 150px; overflow-y: auto; padding: 0.5rem; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0;">
+            style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 150px; overflow-y: auto; padding: 0.5rem; background: var(--surface-alt); border-radius: 4px; border: 1px solid var(--border);">
             <!-- Chips go here -->
             <span class="text-muted" style="font-size: 0.8rem; padding: 1rem; width: 100%; text-align: center;">No dates
                 selected</span>
@@ -833,27 +833,27 @@
         <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem;">
             <button onclick="closeReplicateModal()" class="btn btn-secondary">Cancel</button>
             <button onclick="processReplicate()" class="btn btn-primary"
-                style="background: #7e22ce; border-color: #7e22ce;">Replicate & Add</button>
+                style="background: var(--info-dark); border-color: var(--info-dark);">Replicate & Add</button>
         </div>
     </div>
 </div>
 
 <style>
     .date-chip {
-        background: white;
-        border: 1px solid #cbd5e1;
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
         padding: 4px 8px;
         border-radius: 12px;
         font-size: 0.85rem;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
     }
 
     .date-chip button {
         background: none;
         border: none;
-        color: #ef4444;
+        color: var(--danger-bright);
         font-weight: bold;
         cursor: pointer;
         padding: 0;
@@ -1248,7 +1248,7 @@
             alert("Network or Server Error");
         }
 
-        btn.innerText = 'PRINT ALL';
+        btn.innerText = 'Print all';
         btn.disabled = false;
     }
 
@@ -1273,61 +1273,61 @@
         overlay.style.left = '0';
         overlay.style.width = '100%';
         overlay.style.height = '100%';
-        overlay.style.background = 'rgba(0,0,0,0.9)'; // Darker
+        overlay.style.background = 'var(--pos-scrim-strong)'; // Darker
         overlay.style.zIndex = '3000'; // Above everything
         overlay.style.display = 'flex';
         overlay.style.flexDirection = 'column';
         overlay.style.justifyContent = 'center';
         overlay.style.alignItems = 'center';
-        overlay.style.color = 'white';
+        overlay.style.color = 'var(--surface)';
         // Block interactions
         overlay.style.pointerEvents = 'auto'; // Capture clicks
 
         overlay.innerHTML = `
-            <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-                <h2 style="margin-bottom: 0.5rem; color: #1e293b;">Payment Confirmation</h2>
-                <h3 style="margin: 0 0 1rem 0; color: #d97706; font-size: 2rem; font-weight: 800;">Collect: ₹${parseFloat(totalAmount).toFixed(0)}</h3>
-                <p style="margin-bottom: 2rem; color: #64748b;">Bill No: <strong>${billLabel}</strong><br>Please confirm payment status to proceed.</p>
+            <div style="background: var(--surface); padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; text-align: center; box-shadow: var(--pos-shadow-modal);">
+                <h2 style="margin-bottom: 0.5rem; color: var(--text-main);">Payment Confirmation</h2>
+                <h3 style="margin: 0 0 1rem 0; color: var(--warning); font-size: 2rem; font-weight: 800;">Collect: ₹${parseFloat(totalAmount).toFixed(0)}</h3>
+                <p style="margin-bottom: 2rem; color: var(--text-muted);">Bill No: <strong>${billLabel}</strong><br>Please confirm payment status to proceed.</p>
 
                 <div id="actionButtons" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <button onclick="markPaid()"
-                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: var(--success); color: white; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: var(--success); color: var(--surface); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; justify-content: center; min-width: 160px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         Payment Received
                     </button>
                     <button onclick="markPayLater()"
-                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; flex: 1; justify-content: center; min-width: 160px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        style="padding: 1rem 1.5rem; font-size: 1.1rem; background: var(--accent); color: var(--surface); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; flex: 1; justify-content: center; min-width: 160px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                         Pay Later
                     </button>
                 </div>
 
                 <!-- Hidden Pay Later Form -->
-                <div id="payLaterForm" style="display: none; flex-direction: column; gap: 1rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px; width: 100%; text-align: left; border: 1px solid #e2e8f0;">
-                    <h3 style="color: #1e293b; margin: 0; font-size: 1.1rem;">Enter Booking Devote's phone number</h3>
-                    <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Phone number is mandatory for Pay Later.</p>
+                <div id="payLaterForm" style="display: none; flex-direction: column; gap: 1rem; background: var(--surface-alt); padding: 1.5rem; border-radius: 8px; width: 100%; text-align: left; border: 1px solid var(--border);">
+                    <h3 style="color: var(--text-main); margin: 0; font-size: 1.1rem;">Enter Booking Devote's phone number</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">Phone number is mandatory for Pay Later.</p>
                     <input type="hidden" id="plBillNo">
                     <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
                         <input type="number" id="plPhone" placeholder="10-digit Mobile Number" 
-                            style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem;">
+                            style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-strong); border-radius: 6px; font-size: 1.1rem;">
                     </div>
                     <div style="display: flex; gap: 1rem; width: 100%;">
                         <button onclick="cancelPayLater()" 
-                            style="flex: 1; padding: 0.75rem; background: #94a3b8; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            style="flex: 1; padding: 0.75rem; background: var(--text-faint); color: var(--surface); border: none; border-radius: 6px; cursor: pointer;">
                             Cancel
                         </button>
                         <button onclick="submitPayLater()" 
-                            style="flex: 1; padding: 0.75rem; background: #ea580c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            style="flex: 1; padding: 0.75rem; background: var(--warning); color: var(--surface); border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                             Confirm
                         </button>
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-                    <button onclick="reprintLast()" style="background: none; border: none; color: #3b82f6; cursor: pointer; text-decoration: underline; font-size: 0.95rem;">
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <button onclick="reprintLast()" style="background: none; border: none; color: var(--info); cursor: pointer; text-decoration: underline; font-size: 0.95rem;">
                         Reprint Receipt
                     </button>
-                     <button onclick="location.reload()" style="background: none; border: none; color: #94a3b8; cursor: pointer; text-decoration: underline; font-size: 0.95rem; display: none;">
+                     <button onclick="location.reload()" style="background: none; border: none; color: var(--text-faint); cursor: pointer; text-decoration: underline; font-size: 0.95rem; display: none;">
                         Refresh (Emergency)
                     </button>
                 </div>
@@ -1426,18 +1426,18 @@
             return `
                 <div style="position: relative; min-width: 130px;">
                     <div onclick="resumeDraft('${d.id}')" title="Saved at ${time}"
-                        style="display: flex; flex-direction: column; background: white; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; cursor: pointer; box-shadow: var(--shadow-sm); height: 100%;">
+                        style="display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--warning-border); padding: 6px 10px; border-radius: 6px; cursor: pointer; box-shadow: var(--shadow-sm); height: 100%;">
                         <span style="font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 15px;">
                             ${name}
                         </span>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-                            <span style="font-size: 0.7rem; color: #b45309;">₹${total}</span>
-                            <span style="font-size: 0.6rem; color: #94a3b8;">${time}</span>
+                            <span style="font-size: 0.7rem; color: var(--warning);">₹${total}</span>
+                            <span style="font-size: 0.6rem; color: var(--text-faint);">${time}</span>
                         </div>
                     </div>
-                    <button onclick="discardDraft(event, '${d.id}')"
-                        style="position: absolute; top: 2px; right: 2px; background: #fdecea; color: #b42318; border: 1px solid #f3d6d2; border-radius: 5px; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button onclick="discardDraft(event, '${d.id}')" aria-label="Discard draft"
+                        style="position: absolute; top: 2px; right: 2px; background: var(--danger-soft); color: var(--danger-dark); border: 1px solid var(--danger-border); border-radius: 5px; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
             `;
@@ -1566,21 +1566,21 @@
                     <span>Cashier to Refund:</span>
                     <span>₹${Math.abs(diff)}</span>
                 `;
-                diffContainer.style.color = '#166534'; // Green
+                diffContainer.style.color = 'var(--success-dark)'; // Green
             } else {
                 // To Pay
                 diffContainer.innerHTML = `
                     <span>Devotee to Pay:</span>
                     <span>₹${Math.abs(diff)}</span>
                 `;
-                diffContainer.style.color = '#b91c1c'; // Red
+                diffContainer.style.color = 'var(--danger-dark)'; // Red
             }
         }
 
         if (cart.items.length === 0) {
             container.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8; opacity: 0.6;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-faint); opacity: 0.6;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                     <p style="margin-top: 1rem; font-size: 0.9rem;">Cart is empty</p>
                 </div>
             `;
@@ -1865,17 +1865,17 @@
 
 <!-- Star Finder Modal -->
 <div id="starFinderModal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1100; justify-content: center; align-items: center;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--pos-scrim); z-index: 1100; justify-content: center; align-items: center;">
     <div class="card" style="width: 350px; padding: 0;">
         <div
-            style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            style="padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 1.1rem;">Find Next Star Date</h3>
             <button onclick="closeStarFinder()"
                 style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
         </div>
         <div style="padding: 1rem;">
             <div class="form-group">
-                <label style="font-size: 0.9rem;">Select Star</label>
+                <label for="finderStarSelect" style="font-size: 0.9rem;">Select Star</label>
                 <select id="finderStarSelect" style="width: 100%; padding: 8px; font-size: 1rem; margin-bottom: 0.5rem;"
                     onchange="findNextDates()">
                     <option value="">-- Choose Star --</option>
@@ -1896,8 +1896,8 @@
 
             <style>
                 .btn-duration {
-                    border: 1px solid #cbd5e1;
-                    background: white;
+                    border: 1px solid var(--border-strong);
+                    background: var(--surface);
                     padding: 4px 8px;
                     border-radius: 4px;
                     cursor: pointer;
@@ -1905,14 +1905,14 @@
                 }
 
                 .btn-duration.active {
-                    background: #3b82f6;
-                    color: white;
-                    border-color: #3b82f6;
+                    background: var(--info-dark);
+                    color: var(--surface);
+                    border-color: var(--info-dark);
                 }
             </style>
 
             <div id="finderResults" style="min-height: 100px;">
-                <p style="color: #666; font-size: 0.9rem;">Select a star to see upcoming dates.</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Select a star to see upcoming dates.</p>
             </div>
         </div>
     </div>
@@ -1943,9 +1943,9 @@
                     const isToday = dateVal === new Date().toISOString().split('T')[0];
                     const label = isToday ? "Today's star" : "Star of this date";
                     badge.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="var(--accent)" stroke="none" style="flex:0 0 auto;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="var(--accent)" stroke="none" aria-hidden="true" style="flex:0 0 auto;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                         <span style="display:flex; flex-direction:column; line-height:1.25; min-width:0;">
-                            <span style="font-size:.66rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700;">${label}</span>
+                            <span style="font-size:.66rem; color:var(--text-muted); font-weight:700;">${label}</span>
                             <span style="overflow:hidden; text-overflow:ellipsis;"><strong>${data.nakshatra_eng} / ${data.nakshatra_mal}</strong> <span style="font-weight:500; color:var(--text-muted);">· ${data.mal_date_str}</span></span>
                         </span>
                         <span style="margin-left:auto; font-size:.72rem; color:var(--primary); font-weight:700; white-space:nowrap;">Apply →</span>`;
@@ -1961,7 +1961,7 @@
         if (badge.dataset.star) {
             starInput.value = badge.dataset.star;
             updateDetails();
-            starInput.style.backgroundColor = '#f0fdf4';
+            starInput.style.backgroundColor = 'var(--success-bg-soft)';
             setTimeout(() => starInput.style.backgroundColor = '', 500);
         }
     }
@@ -2030,8 +2030,8 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <span style="font-size: 0.85rem; font-weight: 600;">Found ${data.dates.length} Dates</span>
                         <div style="display: flex; gap: 8px;">
-                            <button onclick="toggleFinderSelection(true)" style="font-size: 0.8rem; background:none; border:none; color:#3b82f6; cursor:pointer;">Select All</button>
-                            <button onclick="toggleFinderSelection(false)" style="font-size: 0.8rem; background:none; border:none; color:#64748b; cursor:pointer;">None</button>
+                            <button onclick="toggleFinderSelection(true)" style="font-size: 0.8rem; background:none; border:none; color:var(--info); cursor:pointer;">Select All</button>
+                            <button onclick="toggleFinderSelection(false)" style="font-size: 0.8rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">None</button>
                         </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">`;
@@ -2042,11 +2042,11 @@
                         const malStr = d.mal_date || d.star.mal;
 
                         html += `
-                        <label class="finder-date-row" style="display: flex; align-items: center; padding: 8px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;">
+                        <label class="finder-date-row" style="display: flex; align-items: center; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
                             <input type="checkbox" class="finder-date-check" value="${d.date}" checked style="margin-right: 10px; width: 16px; height: 16px;">
                             <div style="flex: 1;">
-                                <div style="font-weight: 600; color: #333;">${dStr}</div>
-                                <div style="font-size: 0.75rem; color: #64748b;">${malStr}</div>
+                                <div style="font-weight: 600; color: var(--text-main);">${dStr}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${malStr}</div>
                             </div>
                         </label>
                      `;
@@ -2054,8 +2054,8 @@
                     html += '</div>';
 
                     html += `
-                    <div style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem; text-align: center;">
-                        <button onclick="replicateToSelected()" style="background: #22c55e; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%;">
+                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem; text-align: center;">
+                        <button onclick="replicateToSelected()" style="background: var(--success); color: var(--surface); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%;">
                             Replicate to Selected Dates
                         </button>
                     </div>
@@ -2063,7 +2063,7 @@
 
                     resultsDiv.innerHTML = html;
                 } else {
-                    resultsDiv.innerHTML = '<p style="color: red">Error calculating dates.</p>';
+                    resultsDiv.innerHTML = '<p style="color: var(--danger)">Error calculating dates.</p>';
                 }
             });
     }

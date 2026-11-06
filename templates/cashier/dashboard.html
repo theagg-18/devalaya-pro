@@ -8,7 +8,7 @@
         <p class="text-muted">
             Printer: <strong>{{ printer.friendly_name }}</strong>
             <a href="{{ url_for('cashier.release_printer') }}"
-                style="font-size: 0.8rem; margin-left: 8px; color: #ef4444;">Change</a>
+                style="font-size: 0.8rem; margin-left: 8px; color: var(--danger-bright);">Change</a>
         </p>
     </div>
 </div>
@@ -22,7 +22,7 @@
             <a href="{{ url_for('cashier.start_billing') }}" class="btn btn-primary"
                 style="padding: 1.75rem; display: flex; flex-direction: column; gap: 0.85rem; width: 100%; max-width: 250px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M4 2v20l2-1.5L8 22l2-1.5L12 22l2-1.5L16 22l2-1.5L20 22V2l-2 1.5L16 2l-2 1.5L12 2l-2 1.5L8 2 6 3.5 4 2z"></path>
                     <line x1="8" y1="7" x2="16" y2="7"></line>
                     <line x1="8" y1="11" x2="16" y2="11"></line>
@@ -34,7 +34,7 @@
             <a href="{{ url_for('cashier.history') }}" class="btn btn-secondary"
                 style="padding: 1.75rem; display: flex; flex-direction: column; gap: 0.85rem; width: 100%; max-width: 250px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M3 3v5h5"></path>
                     <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path>
                     <line x1="12" y1="7" x2="12" y2="12"></line>

@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 
+{% block head %}
+<style>
+    /* Hallmark · app screen · redesign: polish */
+    .home-title, .home-subtitle { overflow-wrap: break-word; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="text-center" style="padding: 4rem 0;">
     <p style="font-size: 1.1rem; color: var(--accent); font-weight: 600; margin-bottom: 0.5rem;">
         {{ temple_settings.receipt_footer if temple_settings else '' }}
     </p>
-    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.2;">
+    <h1 class="home-title" style="font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.2; overflow-wrap: break-word;">
         {{ temple_settings.name_mal if temple_settings else 'Devalaya Pro' }}
     </h1>
-    <h2 style="font-size: 1.2rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem;">
+    <h2 class="home-subtitle" style="font-size: 1.2rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; overflow-wrap: break-word;">
         {{ temple_settings.name_eng if temple_settings else 'Temple Billing & Management' }}
     </h2>
 
@@ -20,7 +27,7 @@
 
     {% if temple_settings.subtitle_eng %}
     <h4
-        style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 1px;">
+        style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2rem;">
         {{ temple_settings.subtitle_eng }}
     </h4>
     {% else %}
@@ -36,19 +43,19 @@
 <div class="flex-grid mt-4">
     <div class="card">
         <h3 style="display:flex;align-items:center;gap:10px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
             Fast Billing</h3>
         <p>Optimized for touch screens and thermal printers. Vazhipadu and Donations modes included.</p>
     </div>
     <div class="card">
         <h3 style="display:flex;align-items:center;gap:10px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             Offline First</h3>
         <p>Works without internet. Data is stored locally on USB SSD for reliability.</p>
     </div>
     <div class="card">
         <h3 style="display:flex;align-items:center;gap:10px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
             Multi-Printer support</h3>
         <p>Intelligent printer routing via CUPS. Detects and assigns printers dynamically.</p>
     </div>

@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}Devalaya billing and management for temples: vazhipadu billing, receipts and calendar.{% endblock %}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}{{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}{% endblock %}</title>
 
@@ -13,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
 
     <!-- Dynamic Theme CSS -->
     {% if temple_settings and temple_settings.color_theme %}
@@ -35,7 +36,7 @@
             <a href="/dashboard">Dashboard</a>
             <a href="/utility/calendar">Calendar</a>
             <a href="/utility/panchangam" style="position: relative;">Star Reference <span
-                    style="font-size: 0.6em; background: #eab308; color: black; padding: 2px 4px; border-radius: 4px; vertical-align: top;">New</span></a>
+                    style="font-size: 0.6em; background: var(--gold); color: black; padding: 2px 4px; border-radius: 4px; vertical-align: top;">New</span></a>
             {% if g.user.role == 'cashier' %}
             <a href="{{ url_for('cashier.history') }}">History</a>
             {% endif %}
@@ -60,9 +61,9 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="text-center" style="padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
+    <footer class="text-center" style="padding: 2rem; color: color-mix(in srgb, var(--text-main) 80%, var(--bg)); font-size: 0.8rem;">
         <p>&copy; {{ now_year }} {{ temple_settings.name_eng if temple_settings else 'Devalaya Pro' }}</p>
-        <p style="margin-top: 0.5rem; opacity: 0.7;">Powered by {{ app_version_display }}</p>
+        <p style="margin-top: 0.5rem;">Powered by {{ app_version_display }}</p>
     </footer>
 
     {% block scripts %}{% endblock %}
